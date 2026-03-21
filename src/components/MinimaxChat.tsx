@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, MessageCircle, Loader2, CheckCheck, Undo2, UserCircle2, ChevronDown } from "lucide-react";
+import { X, Send, MessageCircle, Loader2, CheckCheck, Undo2, UserCircle2, ChevronDown, ImageIcon, Trash2, Eye, RotateCcw } from "lucide-react";
 import { MagazineContent } from "@/components/MagazinePreview";
 
 // ── User profile types & storage ─────────────────────────────────────────────
@@ -27,6 +27,24 @@ function setActiveUserName(name: string) {
   localStorage.setItem(ACTIVE_KEY, name);
 }
 
+// ── Chat history persistence ──────────────────────────────────────────────────
+
+const CHAT_KEY = "cvo_chat_history";
+
+function loadChatHistory(): Message[] {
+  try {
+    const raw = localStorage.getItem(CHAT_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as Message[];
+  } catch { return []; }
+}
+
+function saveChatHistory(msgs: Message[]) {
+  // Don't store base64 images in history to keep localStorage light
+  const slim = msgs.map(m => ({ ...m, imageDataUrl: m.imageDataUrl ? "[afbeelding]" : undefined }));
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify(slim.slice(-60))); } catch { /* quota */ }
+}
+
 // ── Message types ─────────────────────────────────────────────────────────────
 
 interface Message {
@@ -34,6 +52,7 @@ interface Message {
   content: string;
   hasEdit?: boolean;
   snapshot?: Partial<MagazineContent>;
+  imageDataUrl?: string;   // for display in chat
 }
 
 interface MinimaxChatProps {
@@ -99,7 +118,7 @@ function buildProfileContext(profile: UserProfile | null): string {
   }
   return `=== GEBRUIKER ===
 Naam: ${profile.name}
-Voorkeuren:
+Voorkeuren (geleerd uit eerdere sessies):
 ${profile.preferences.length > 0 ? profile.preferences.map(p => `  • ${p}`).join("\n") : "  (nog geen voorkeuren opgeslagen)"}
 === EINDE GEBRUIKER ===`;
 }
@@ -139,7 +158,6 @@ function parseAllBlocks(raw: string): {
   patch: Partial<MagazineContent> | null;
   profileUpdate: ProfileUpdate | null;
 } {
-  // Strip profile block first, then edit block
   const profileResult = parseProfileBlock(raw);
   const editResult = parseEditBlock(profileResult.text);
   return {
@@ -158,7 +176,7 @@ function isEditRequest(input: string): boolean {
   const keywords = ["zet", "maak", "schrijf", "voeg", "verander", "pas", "update", "bouw",
     "geef", "verwijder", "vul", "aanpas", "wijzig", "stel", "template",
     "headline", "tekst", "blok", "sectie", "layout", "lay-out", "events",
-    "crew", "banner", "style", "stijl"];
+    "crew", "banner", "style", "stijl", "analyseer", "kijk naar", "beschrijf"];
   return keywords.some((k) => input.toLowerCase().includes(k));
 }
 
@@ -180,6 +198,11 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [activeUserName, setActiveUserNameState] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showPrefsPanel, setShowPrefsPanel] = useState(false);
+
+  // Image state
+  const [pendingImage, setPendingImage] = useState<{ dataUrl: string; mimeType: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeProfile = activeUserName ? profiles[activeUserName] ?? null : null;
 
@@ -203,14 +226,45 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
   };
 
   const [messages, setMessages] = useState<Message[]>(() => {
+    const history = loadChatHistory();
+    if (history.length > 0) return history;
     const p = loadProfiles();
     const a = getActiveUserName();
     const profile = a ? p[a] ?? null : null;
     return [{ role: "assistant", content: buildInitialMessage(profile) }];
   });
 
+  // Persist chat history whenever messages change
+  useEffect(() => {
+    saveChatHistory(messages);
+  }, [messages]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ── Clipboard paste handler (screenshots) ────────────────────────────────
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (!file) continue;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            setPendingImage({ dataUrl, mimeType: item.type });
+          };
+          reader.readAsDataURL(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
   const [loadingLabel, setLoadingLabel] = useState("Aan het schrijven...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef(content);
@@ -242,10 +296,24 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
       const newProfiles = { ...prev, [name]: updated };
       saveProfiles(newProfiles);
 
-      // Set as active user
       setActiveUserName(name);
       setActiveUserNameState(name);
 
+      return newProfiles;
+    });
+  }
+
+  function deletePreference(prefToDelete: string) {
+    if (!activeUserName) return;
+    setProfiles((prev) => {
+      const existing = prev[activeUserName];
+      if (!existing) return prev;
+      const updated: UserProfile = {
+        ...existing,
+        preferences: existing.preferences.filter(p => p !== prefToDelete),
+      };
+      const newProfiles = { ...prev, [activeUserName]: updated };
+      saveProfiles(newProfiles);
       return newProfiles;
     });
   }
@@ -254,6 +322,8 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
     setActiveUserName(name);
     setActiveUserNameState(name);
     setShowUserMenu(false);
+    setShowPrefsPanel(false);
+    localStorage.removeItem(CHAT_KEY);
     const p = loadProfiles();
     const profile = p[name] ?? null;
     setMessages([{ role: "assistant", content: buildInitialMessage(profile) }]);
@@ -263,17 +333,55 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
     setActiveUserName("");
     setActiveUserNameState(null);
     setShowUserMenu(false);
+    setShowPrefsPanel(false);
+    localStorage.removeItem(CHAT_KEY);
     setMessages([{ role: "assistant", content: buildInitialMessage(null) }]);
   }
 
+  function startNewChat() {
+    const fresh = [{ role: "assistant" as const, content: buildInitialMessage(activeProfile) }];
+    setMessages(fresh);
+    localStorage.removeItem(CHAT_KEY);
+    setPendingImage(null);
+    setInput("");
+  }
+
+  // ── Image upload ───────────────────────────────────────────────────────────
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setPendingImage({ dataUrl, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  }
+
+  // ── Send message ───────────────────────────────────────────────────────────
+
   async function sendMessage() {
-    if (!input.trim() || loading) return;
-    const userMsg: Message = { role: "user", content: input.trim() };
+    if ((!input.trim() && !pendingImage) || loading) return;
+    const userContent = input.trim() || (pendingImage ? "Analyseer deze afbeelding en geef suggesties voor het magazine." : "");
     const snapshot = contentRef.current ? { ...contentRef.current } : undefined;
 
+    const userMsg: Message = {
+      role: "user",
+      content: userContent,
+      imageDataUrl: pendingImage?.dataUrl,
+    };
+
+    // Extract base64 from dataUrl (strip "data:image/...;base64,")
+    const imageBase64 = pendingImage?.dataUrl.split(",")[1] ?? null;
+    const imageMimeType = pendingImage?.mimeType ?? null;
+
     setMessages((prev) => [...prev, userMsg]);
-    setLoadingLabel(isBigBuild(input) ? "Magazine aan het bouwen..." : "Aan het schrijven...");
+    setLoadingLabel(isBigBuild(userContent) ? "Magazine aan het bouwen..." : pendingImage ? "Afbeelding analyseren..." : "Aan het schrijven...");
     setInput("");
+    setPendingImage(null);
     setLoading(true);
 
     try {
@@ -284,9 +392,14 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+          messages: [...messages, userMsg].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
           magazineContext,
           profileContext,
+          imageBase64,
+          imageMimeType,
         }),
       });
 
@@ -294,7 +407,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
       const raw: string = data.reply ?? "Sorry, er ging iets mis.";
       const { text, patch, profileUpdate } = parseAllBlocks(raw);
 
-      // Apply profile update
+      // Apply profile update (self-learning)
       if (profileUpdate) {
         applyProfileUpdate(profileUpdate);
       }
@@ -306,7 +419,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
         hasEdit = true;
       }
 
-      const noEditWarning = !hasEdit && !profileUpdate && isEditRequest(userMsg.content)
+      const noEditWarning = !hasEdit && !profileUpdate && isEditRequest(userContent) && !imageBase64
         ? "\n\n⚠️ De AI paste niets aan. Probeer het opnieuw of wees specifieker."
         : "";
 
@@ -349,7 +462,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
           {/* User menu */}
           <div style={{ position: "relative" }}>
             <button
-              onClick={() => setShowUserMenu(p => !p)}
+              onClick={() => { setShowUserMenu(p => !p); setShowPrefsPanel(false); }}
               title="Gebruiker wisselen"
               style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 6, padding: "4px 7px", cursor: "pointer", color: "white", display: "flex", alignItems: "center", gap: 3 }}
             >
@@ -359,27 +472,37 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
             {showUserMenu && (
               <div style={{
                 position: "absolute", top: "calc(100% + 6px)", right: 0, background: "#1c1c1f",
-                border: "1px solid #3f3f46", borderRadius: 8, minWidth: 170, zIndex: 100,
+                border: "1px solid #3f3f46", borderRadius: 8, minWidth: 190, zIndex: 100,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden",
               }}>
                 <div style={{ padding: "6px 10px", fontSize: 9, color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
                   Bekende gebruikers
                 </div>
                 {knownUsers.map((u) => (
-                  <button
-                    key={u.name}
-                    onClick={() => switchUser(u.name)}
-                    style={{
-                      width: "100%", textAlign: "left", background: u.name === activeUserName ? "#F15B2B22" : "none",
-                      border: "none", padding: "8px 12px", cursor: "pointer", color: u.name === activeUserName ? "#F15B2B" : "white",
-                      fontSize: 12, fontWeight: u.name === activeUserName ? 700 : 400,
-                    }}
-                  >
-                    {u.name}
-                    {u.preferences.length > 0 && (
-                      <span style={{ color: "#71717a", fontSize: 10, marginLeft: 6 }}>· {u.preferences.length} voorkeuren</span>
+                  <div key={u.name} style={{ display: "flex", alignItems: "center" }}>
+                    <button
+                      onClick={() => switchUser(u.name)}
+                      style={{
+                        flex: 1, textAlign: "left", background: u.name === activeUserName ? "#F15B2B22" : "none",
+                        border: "none", padding: "8px 12px", cursor: "pointer", color: u.name === activeUserName ? "#F15B2B" : "white",
+                        fontSize: 12, fontWeight: u.name === activeUserName ? 700 : 400,
+                      }}
+                    >
+                      {u.name}
+                      {u.preferences.length > 0 && (
+                        <span style={{ color: "#71717a", fontSize: 10, marginLeft: 6 }}>· {u.preferences.length} voorkeuren</span>
+                      )}
+                    </button>
+                    {u.name === activeUserName && u.preferences.length > 0 && (
+                      <button
+                        onClick={() => { setShowPrefsPanel(p => !p); setShowUserMenu(false); }}
+                        title="Beheer voorkeuren"
+                        style={{ background: "none", border: "none", padding: "6px 8px", cursor: "pointer", color: "#71717a" }}
+                      >
+                        <Eye size={12} />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))}
                 <div style={{ borderTop: "1px solid #27272a" }}>
                   <button
@@ -392,18 +515,60 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
               </div>
             )}
           </div>
+          <button
+            onClick={startNewChat}
+            title="Nieuwe chat starten"
+            style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 6, padding: "4px 7px", cursor: "pointer", color: "white", display: "flex", alignItems: "center" }}
+          >
+            <RotateCcw size={14} />
+          </button>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "white" }}>
             <X size={18} />
           </button>
         </div>
       </div>
 
+      {/* Preferences panel (inline, below header) */}
+      {showPrefsPanel && activeProfile && activeProfile.preferences.length > 0 && (
+        <div style={{ background: "#1c1c1f", borderBottom: "1px solid #3f3f46", padding: "10px 14px", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+              Opgeslagen voorkeuren — {activeProfile.name}
+            </span>
+            <button onClick={() => setShowPrefsPanel(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a" }}>
+              <X size={12} />
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {activeProfile.preferences.map((pref, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#27272a", borderRadius: 6, padding: "5px 8px" }}>
+                <span style={{ fontSize: 11, color: "#e4e4e7", flex: 1 }}>{pref}</span>
+                <button
+                  onClick={() => deletePreference(pref)}
+                  title="Verwijder voorkeur"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", padding: "2px 4px", marginLeft: 6, flexShrink: 0 }}
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 9, color: "#52525b", marginTop: 6 }}>
+            De AI gebruikt deze voorkeuren automatisch. Klik op 🗑 om te verwijderen.
+          </p>
+        </div>
+      )}
+
       {/* User preferences strip */}
-      {activeProfile && activeProfile.preferences.length > 0 && (
-        <div style={{ background: "#1c1c1f", padding: "5px 14px", fontSize: 10, color: "#a1a1aa", borderBottom: "1px solid #27272a", flexShrink: 0 }}>
+      {!showPrefsPanel && activeProfile && activeProfile.preferences.length > 0 && (
+        <button
+          onClick={() => setShowPrefsPanel(true)}
+          style={{ background: "#1c1c1f", padding: "5px 14px", fontSize: 10, color: "#a1a1aa", borderBottom: "1px solid #27272a", flexShrink: 0, border: "none", textAlign: "left", cursor: "pointer", width: "100%" }}
+        >
           ✦ Jouw stijl: {activeProfile.preferences.slice(0, 2).join(" · ")}
           {activeProfile.preferences.length > 2 && ` · +${activeProfile.preferences.length - 2}`}
-        </div>
+          <span style={{ color: "#52525b", marginLeft: 8, fontSize: 9 }}>klik om te beheren</span>
+        </button>
       )}
 
       {/* Context badge */}
@@ -429,9 +594,17 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
       )}
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }} onClick={() => setShowUserMenu(false)}>
+      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }} onClick={() => { setShowUserMenu(false); }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
+            {/* Image preview in message */}
+            {m.imageDataUrl && (
+              <img
+                src={m.imageDataUrl}
+                alt="Uploaded"
+                style={{ maxWidth: 200, maxHeight: 140, borderRadius: 8, marginBottom: 4, objectFit: "cover", border: "1px solid #3f3f46" }}
+              />
+            )}
             <div style={{
               maxWidth: "88%", padding: "8px 12px", borderRadius: 12,
               background: m.role === "user" ? "#F15B2B" : "#27272a",
@@ -469,8 +642,48 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Pending image preview */}
+      {pendingImage && (
+        <div style={{ padding: "8px 12px", borderTop: "1px solid #27272a", background: "#1c1c1f", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src={pendingImage.dataUrl}
+            alt="Te versturen"
+            style={{ height: 48, width: 64, objectFit: "cover", borderRadius: 6, border: "1px solid #3f3f46" }}
+          />
+          <span style={{ fontSize: 11, color: "#a1a1aa", flex: 1 }}>Afbeelding klaar om te versturen</span>
+          <button
+            onClick={() => setPendingImage(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Input */}
-      <div style={{ padding: 12, borderTop: "1px solid #27272a", display: "flex", gap: 8, flexShrink: 0 }}>
+      <div style={{ padding: "12px 12px 8px", borderTop: "1px solid #27272a", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handleImageSelect}
+        />
+        {/* Image upload button (also supports Ctrl+V paste) */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          title="Afbeelding uploaden (of plak met Ctrl+V)"
+          style={{
+            background: pendingImage ? "#F15B2B22" : "#27272a",
+            border: `1px solid ${pendingImage ? "#F15B2B" : "#3f3f46"}`,
+            borderRadius: 8, padding: "8px 10px", cursor: "pointer",
+            color: pendingImage ? "#F15B2B" : "#71717a", flexShrink: 0,
+          }}
+        >
+          <ImageIcon size={16} />
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -480,11 +693,15 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
         />
         <button
           onClick={sendMessage}
-          disabled={loading || !input.trim()}
-          style={{ background: "#F15B2B", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "white", opacity: loading || !input.trim() ? 0.5 : 1 }}
+          disabled={loading || (!input.trim() && !pendingImage)}
+          style={{ background: "#F15B2B", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "white", opacity: loading || (!input.trim() && !pendingImage) ? 0.5 : 1, flexShrink: 0 }}
         >
           <Send size={16} />
         </button>
+      </div>
+      <p style={{ color: "#3f3f46", fontSize: 9, marginTop: 5, textAlign: "center" }}>
+        📋 Plak een screenshot met Ctrl+V · 📷 Upload via het icoontje
+      </p>
       </div>
     </div>
   );

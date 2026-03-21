@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import MagazinePreview, { defaultContent, MagazineContent, CustomBlock, CustomRow } from "@/components/MagazinePreview";
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
+import PasswordGate from "@/components/PasswordGate";
 import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut } from "lucide-react";
 
 // ── Defaults for any missing CustomBlock fields ──────────────────────────────
@@ -147,6 +148,7 @@ export default function Home() {
   };
 
   return (
+    <PasswordGate>
     <main className="flex h-screen bg-gray-200 overflow-hidden">
       {/* Left: Editor panel */}
       <EditorPanel content={content} onChange={setContent} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
@@ -371,5 +373,6 @@ export default function Home() {
         </div>
       )}
     </main>
+    </PasswordGate>
   );
 }

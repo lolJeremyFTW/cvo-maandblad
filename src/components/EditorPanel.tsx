@@ -729,12 +729,38 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
             </div>
             <div>
               <Label>Kleurschema</Label>
-              <select {...register("logoColor")} className={inputCls} style={{ padding: "7px 8px" }}>
-                <option value="Orange">Oranje (default)</option>
-                <option value="Black">Monochroom</option>
-                <option value="Green">Groen</option>
-                <option value="Gold">Goud</option>
-              </select>
+              {/* Visual swatch picker — design.md brand colors */}
+              <div className="flex gap-1.5 mt-1">
+                {([
+                  { value: "Orange", bg: "#F15B2B", border: "#1A1A1A", label: "Oranje" },
+                  { value: "Black",  bg: "#1A1A1A", border: "#1A1A1A", label: "Zwart"  },
+                  { value: "Mint",   bg: "#ACDCCE", border: "#1A1A1A", label: "Mint"   },
+                  { value: "Cream",  bg: "#FEFDED", border: "#1A1A1A", label: "Cream"  },
+                ] as const).map(({ value, bg, border, label }) => {
+                  const active = watch("logoColor") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      title={label}
+                      onClick={() => onChange({ ...(watch() as MagazineContent), logoColor: value })}
+                      className="flex flex-col items-center gap-1 flex-1 py-2 transition-all"
+                      style={{
+                        border: active ? `2px solid ${border}` : "2px solid #e5e7eb",
+                        background: active ? "#f9f9f9" : "white",
+                        cursor: "pointer",
+                        outline: active ? "2px solid #F15B2B" : "none",
+                        outlineOffset: -4,
+                      }}
+                    >
+                      <div style={{ width: 22, height: 22, background: bg, border: "1px solid rgba(0,0,0,0.12)" }} />
+                      <span className={`text-[8px] uppercase tracking-wide font-archivo ${active ? "font-bold text-cvo-black" : "text-gray-400"}`}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

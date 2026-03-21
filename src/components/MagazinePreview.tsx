@@ -55,7 +55,7 @@ export interface CustomRow {
 export interface MagazineContent {
   template: TemplateType;
   logoPosition: "Top" | "Bottom";
-  logoColor: "Orange" | "Black" | "Gold" | "Green";
+  logoColor: "Orange" | "Black" | "Mint" | "Cream";
   logoX: number;    // 0=left … 100=right
   logoSize: number;    // height in px
   logoPadding: number; // px padding above + below logo (each side)
@@ -281,12 +281,45 @@ function LogoArea({ content }: { content: MagazineContent }) {
   );
 }
 
-// Color schemes: maps logoColor option → CSS variable overrides for accent + secondary
+// Color schemes — all 4 design.md brand colors, override both var layers so cascade works
+// with both @theme (var references) and any inline var() usages
 const COLOR_SCHEMES: Record<string, Record<string, string>> = {
-  Orange: { "--color-cvo-orange": "#F15B2B", "--color-cvo-mint": "#ACDCCE" },
-  Black:  { "--color-cvo-orange": "#1a1a1a", "--color-cvo-mint": "#d4d4d4" },
-  Green:  { "--color-cvo-orange": "#2a7d5a", "--color-cvo-mint": "#b8e0ca" },
-  Gold:   { "--color-cvo-orange": "#b08030", "--color-cvo-mint": "#f5e0a0" },
+  // Default: Oranje hoofdkleur, Mint accent
+  Orange: {
+    "--cvo-orange":       "#F15B2B",
+    "--color-cvo-orange": "#F15B2B",
+    "--cvo-mint":         "#ACDCCE",
+    "--color-cvo-mint":   "#ACDCCE",
+    "--cvo-cream":        "#FEFDED",
+    "--color-cvo-cream":  "#FEFDED",
+  },
+  // Monochroom: alles zwart als accent
+  Black: {
+    "--cvo-orange":       "#1A1A1A",
+    "--color-cvo-orange": "#1A1A1A",
+    "--cvo-mint":         "#4a4a4a",
+    "--color-cvo-mint":   "#4a4a4a",
+    "--cvo-cream":        "#f0f0f0",
+    "--color-cvo-cream":  "#f0f0f0",
+  },
+  // Mint: de blauwe/groene merkkleur als hoofdaccent
+  Mint: {
+    "--cvo-orange":       "#ACDCCE",
+    "--color-cvo-orange": "#ACDCCE",
+    "--cvo-mint":         "#F15B2B",
+    "--color-cvo-mint":   "#F15B2B",
+    "--cvo-cream":        "#FEFDED",
+    "--color-cvo-cream":  "#FEFDED",
+  },
+  // Cream: licht/warm schema, oranje blijft maar cream als accentvlak
+  Cream: {
+    "--cvo-orange":       "#F15B2B",
+    "--color-cvo-orange": "#F15B2B",
+    "--cvo-mint":         "#FEFDED",
+    "--color-cvo-mint":   "#FEFDED",
+    "--cvo-cream":        "#ACDCCE",
+    "--color-cvo-cream":  "#ACDCCE",
+  },
 };
 
 const BLOCK_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -595,34 +628,33 @@ function CustomBlockView({
                 {block.headline || "Meet The Crew"}
               </span>
             </div>
-            {/* Crew grid */}
+            {/* Crew grid — always one row, all members equal width */}
             <div style={{
               flex: 1, padding: padVal, overflow: "hidden",
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(crewData.length, 4)}, 1fr)`,
-              gap: 8, alignContent: "center",
+              display: "flex", flexDirection: "row",
+              gap: 6, alignItems: "center", justifyContent: "center",
             }}>
               {crewData.map((member, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  {/* Avatar */}
+                <div key={i} style={{ flex: "1 1 0%", minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  {/* Avatar — square that fills flex cell, then circular */}
                   <div style={{
-                    width: "100%", paddingBottom: "100%", borderRadius: "50%", overflow: "hidden",
+                    width: "100%", aspectRatio: "1 / 1", borderRadius: "50%", overflow: "hidden",
                     background: `${textColor}25`, position: "relative",
-                    border: `2px solid ${textColor}`,
+                    border: `2px solid ${textColor}`, flexShrink: 0,
                   }}>
                     <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {member.avatar ? (
                         <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                        <span style={{ fontSize: 13, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>
+                        <span style={{ fontSize: `${Math.max(7, Math.round(40 / crewData.length))}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>
                           {member.name.slice(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
                   </div>
                   <div style={{ textAlign: "center", width: "100%" }}>
-                    <div style={{ fontSize: 8, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
-                    <div style={{ fontSize: 6.5, color: textColor, opacity: 0.55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.08em" }}>{member.role}</div>
+                    <div style={{ fontSize: `${Math.max(6, Math.round(36 / crewData.length))}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                    <div style={{ fontSize: `${Math.max(5, Math.round(28 / crewData.length))}px`, color: textColor, opacity: 0.55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.06em" }}>{member.role}</div>
                   </div>
                 </div>
               ))}

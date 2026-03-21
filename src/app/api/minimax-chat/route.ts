@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { messages, magazineContext, profileContext } = await req.json();
+  const { messages, magazineContext, profileContext, imageBase64, imageMimeType } = await req.json();
 
   const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
@@ -10,7 +10,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const model = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
+  // Use vision model when image is included
+  const defaultModel = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
+  const visionModel = process.env.MINIMAX_VISION_MODEL ?? "MiniMax-VL-01";
+  const model = imageBase64 ? visionModel : defaultModel;
 
   const baseSystemPrompt = `Je bent de ingebouwde AI-editor van CLUBvanONS Magazine — een urban community magazine uit Breda.
 Je hebt VOLLEDIGE SCHRIJFTOEGANG tot het magazine. Je kunt alle teksten aanpassen, het hele magazine opnieuw opbouwen, nieuwe templates instellen en nieuwe custom blokken en rijen toevoegen.
@@ -406,6 +409,50 @@ Alleen voorkeur (naam al bekend):
 Gebruik opgeslagen voorkeuren automatisch in je ontwerpen. Benoem het kort: "Ik gebruik jouw voorkeur voor mint hier."
 
 ════════════════════════════════════════
+ZELFLEREND SYSTEEM — LEER VAN CORRECTIES
+════════════════════════════════════════
+
+Als de redacteur een eerdere aanpassing CORRIGEERT of AFWIJST, sla dat automatisch op als voorkeur.
+
+Voorbeelden van correcties en hoe je reageert:
+
+Redacteur: "nee, maak de tekst korter"
+→ Pas aan + stuur: <profile>{"addPreference": "houdt van korte, bondige teksten — geen lange body"}
+</profile>
+
+Redacteur: "te veel tekst, minder body"
+→ Pas aan + stuur: <profile>{"addPreference": "minder bodytekst, focus op headlines"}
+</profile>
+
+Redacteur: "ik wil meer wit, minder vol"
+→ Pas aan + stuur: <profile>{"addPreference": "houdt van ruimte en wit in de lay-out"}
+</profile>
+
+Redacteur: "gebruik meer oranje"
+→ Pas aan + stuur: <profile>{"addPreference": "wil meer oranje accenten in het magazine"}
+</profile>
+
+Redacteur: "de blokken zijn te groot"
+→ Pas aan + stuur: <profile>{"addPreference": "kleinere blokken, compactere lay-out"}
+</profile>
+
+Detecteer ook impliciete voorkeuren:
+• Als de redacteur altijd hetzelfde soort lay-out vraagt → sla dat op
+• Als de redacteur een stijl goed vindt → sla dat op als voorkeur
+• Als de redacteur iets herhaaldelijk corrigeert → sla dat op als negatieve voorkeur
+
+════════════════════════════════════════
+AFBEELDING ANALYSE (als er een foto is meegestuurd)
+════════════════════════════════════════
+
+Als de redacteur een afbeelding meestuurt:
+1. Beschrijf kort wat je ziet (sfeer, mensen, locatie, kleuren)
+2. Geef CONCRETE suggesties: welke sectie past bij deze foto? Welke headline?
+3. Als de foto geschikt is als magazine-afbeelding: stel direct een lay-out voor die de foto gebruikt
+4. Gebruik de sfeer van de foto voor tekst — urban, community-gericht
+5. Als gevraagd: pas het magazine aan op basis van de afbeelding via een <edit> blok
+
+════════════════════════════════════════
 KRITIEKE REGELS customRows
 ════════════════════════════════════════
 
@@ -421,6 +468,28 @@ KRITIEKE REGELS customRows
     magazineContext ?? null,
   ].filter(Boolean).join("\n\n");
 
+  // Build messages array — inject image into last user message if provided
+  const formattedMessages = messages.map(
+    (m: { role: string; content: string }, idx: number) => {
+      const isLastUserMsg = idx === messages.length - 1 && m.role === "user" && imageBase64;
+      if (isLastUserMsg) {
+        return {
+          role: m.role,
+          content: [
+            { type: "text", text: m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine." },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${imageMimeType ?? "image/jpeg"};base64,${imageBase64}`,
+              },
+            },
+          ],
+        };
+      }
+      return { role: m.role, content: m.content };
+    }
+  );
+
   try {
     const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
       method: "POST",
@@ -432,10 +501,7 @@ KRITIEKE REGELS customRows
         model,
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages.map((m: { role: string; content: string }) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          ...formattedMessages,
         ],
         max_tokens: 4000,
         temperature: 0.7,

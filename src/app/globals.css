@@ -8,7 +8,7 @@
   --cvo-black: #1a1a1a;
 }
 
-@theme inline {
+@theme {
   --color-cvo-orange: var(--cvo-orange);
   --color-cvo-mint: var(--cvo-mint);
   --color-cvo-cream: var(--cvo-cream);

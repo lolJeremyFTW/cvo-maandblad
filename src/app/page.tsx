@@ -312,7 +312,8 @@ export default function Home() {
 
         {/* Magazine — CSS zoom affects layout (unlike transform: scale) */}
         <div
-          className="print:max-w-none print:mx-0 print:zoom-none"
+          id="magazine-zoom-wrapper"
+          className="print:max-w-none print:mx-0"
           style={{
             maxWidth: 820,
             margin: "0 auto",

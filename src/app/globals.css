@@ -52,16 +52,16 @@ body {
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
   }
 
-  /* Alleen het magazine en zijn kinderen zichtbaar */
-  #magazine,
-  #magazine * {
+  /* ── Zoom-wrapper: reset screen-zoom, position to A4 ── */
+  /* This ensures the magazine always prints at 100% scale regardless of
+     the on-screen zoom level the user has set in the editor.              */
+  #magazine-zoom-wrapper {
     visibility: visible !important;
-  }
-
-  /* Zet magazine exact op de A4 pagina */
-  #magazine {
+    zoom: 1 !important;               /* cancel screen zoom */
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -70,8 +70,24 @@ body {
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Alleen het magazine en zijn kinderen zichtbaar */
+  #magazine-zoom-wrapper #magazine,
+  #magazine-zoom-wrapper #magazine * {
+    visibility: visible !important;
+  }
+
+  /* Magazine fills the wrapper exactly */
+  #magazine {
+    position: static !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
-    border: none !important;
     overflow: hidden !important;
     page-break-after: avoid !important;
     break-after: avoid !important;

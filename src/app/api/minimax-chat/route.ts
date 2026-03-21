@@ -198,20 +198,20 @@ EENVOUDIGE TEKSTVELDEN:
 • "crewTeaser"           — intro over de crew
 • "mainFeatureHeadline"  — hoofdtitel feature artikel
 • "mainFeatureBody"      — bodytekst feature artikel
-• "buurtpostHeadline"    — titel buurtpost sectie
-• "buurtpostBody"        — tekst buurtpost sectie
-• "pakDeMicText"         — Pak de Mic quote/tekst
-• "flashbackHeadline"    — titel terugblik
-• "flashbackBody"        — tekst terugblik
+• "buurtpostHeadline"    — titel buurtpost sectie (fallback als buurtpost blok geen body heeft)
+• "buurtpostBody"        — tekst buurtpost sectie (fallback)
+• "pakDeMicText"         — Pak de Mic quote/tekst (fallback als pakdemic blok geen body heeft)
+• "flashbackHeadline"    — titel terugblik (gebruikt door terugblik contentType)
+• "flashbackBody"        — tekst terugblik (gebruikt door terugblik contentType)
 • "companyDescription"   — over CLUBvanONS tekst
 • "template"             — een van de template-waarden hierboven
 • "logoColor"            — "Orange" | "Black" | "Mint" | "Cream"
 • "logoPosition"         — "Top" | "Bottom"
 • "logoSize"             — getal (px hoogte logo, bijv. 90)
-• "logoPadding"          — getal (px, mag negatief tot -25)
-• "logoX"                — getal 0–100 (horizontale positie logo)
-• "customPadding"        — getal 0–40 (padding rondom canvas)
-• "customGap"            — getal 0–16 (ruimte tussen blokken)
+• "logoPadding"          — getal (px, kan negatief zijn tot -25 om logo dichter op canvas te trekken)
+• "logoX"                — getal 0–100 (horizontale positie: 0=links, 50=midden, 100=rechts)
+• "customPadding"        — getal 0–40 (witruimte rondom het canvas)
+• "customGap"            — getal 0–16 (ruimte tussen blokken in pixels)
 
 EVENTS (vervang de hele array):
 "events": [
@@ -219,7 +219,7 @@ EVENTS (vervang de hele array):
   { "day": "25", "month": "APR", "title": "Buurtbbq", "detail": "Wilhelminapark — 15:00" }
 ]
 
-CREW (vervang de hele array):
+CREW (vervang de hele array — avatar wordt automatisch door de gebruiker geüpload, zet geen avatar):
 "crew": [
   { "name": "Stefanie", "role": "Hoofdredacteur" },
   { "name": "Jaap", "role": "Design" }
@@ -271,11 +271,13 @@ SCHEMA VOOR EEN BLOK (CustomBlock):
   // "joinus"    — join us / meedoen CTA
 
   // Tekst inhoud
-  "headline": "CLUBVANONS",      // grote koptekst
-  "headlineSize": 36,            // 12–72 (px)
-  "body": "Urban magazine.",     // bodytekst (optioneel)
+  "headline": "DE STRAAT IS VAN ONS",  // grote koptekst
+  "headlineSize": 36,            // 12–72 (px) — zie tekst-schaal regels!
+  "body": "Community tekst.",    // bodytekst (optioneel, laat leeg bij kleine blokken)
   "bodySize": 13,                // 9–18 (px)
-  "tag": "NIEUWS",               // klein label badge boven headline (optioneel)
+  "tag": "NIEUWS",               // klein label badge BOVEN headline (optioneel)
+                                 // Werkt op: text, poster, image, split, quote, divider
+                                 // Niet op: crew, events, pakdemic, terugblik, joinus (eigen badges)
 
   // Afbeelding
   // ⚠️ AFBEELDING REGELS — LEES GOED:
@@ -284,12 +286,16 @@ SCHEMA VOOR EEN BLOK (CustomBlock):
   // • Nieuwe afbeelding       → "image": "https://..."
   // Gebruik ALTIJD "[AFBEELDING AANWEZIG ✓]" als je de huidige foto wilt bewaren maar customRows
   // opnieuw opbouwt. De frontend vervangt dit automatisch met de echte foto-data.
-  // Gebruik "" alleen als de redacteur uitdrukkelijk vraagt de foto te verwijderen.
-  "image": "[AFBEELDING AANWEZIG ✓]",  // of "" om te verwijderen, of nieuwe URL
+  // ⚠️ Voor "terugblik" contentType: image veld heeft GEEN EFFECT. Foto's komen uit flashbackImages.
+  "image": "[AFBEELDING AANWEZIG ✓]",  // of "" om te verwijderen
   "imagePosition": "bg",         // "left" | "right" | "bg"
-  "imageSize": 100,              // 10–200 (percentage grootte)
-  "imageFit": "cover",           // "cover" | "contain" | "fill"
-  "imageOpacity": 80,            // 0–100 (doorzichtigheid afbeelding)
+                                 // bg = foto vult hele blok (voor poster/image)
+                                 // left/right = foto naast tekst (voor split)
+  "imageSize": 100,              // 10–200 (percentage — 100=normaal, >100=ingezoomd)
+  "imageFit": "cover",           // "cover"=vult vlak | "contain"=volledig zichtbaar | "fill"=uitgerekt
+  "imageOpacity": 80,            // 0–100 (0=onzichtbaar, 100=volledig zichtbaar)
+                                 // poster: gebruik 40–65 zodat tekst leesbaar blijft
+                                 // image: gebruik 80–100 voor heldere foto's
 
   // Typografie
   "textAlign": "left",           // "left" | "center" | "right"
@@ -352,18 +358,51 @@ TEKST SCHAALT MEE:
   80px blok: headlineSize 18–22, padding "sm", GEEN body
   Vuistregel: headlineSize ≤ blok-hoogte ÷ 6
 
-CONTENT TYPES — altijd de juiste kiezen:
-  "crew"      → crew-blok, data automatisch uit magazine (NOOIT crew handmatig schrijven)
-  "events"    → agenda, data automatisch (NOOIT events handmatig schrijven)
-  "pakdemic"  → Pak de Mic, tekst automatisch
-  "buurtpost" → buurtpost sectie, data automatisch
-  "terugblik" → terugblik/flashback sectie, data automatisch
-  "joinus"    → meedoen CTA, automatisch
-  "text"      → vrije tekst: feature artikel, headline, quote in body
-  "image"     → alleen foto (geen tekst erop)
-  "poster"    → foto als achtergrond + tekst eroverheen (imageOpacity 50–75)
-  "quote"     → grote gecursiveerde quote (italic:true, uppercase:false)
-  "divider"   → decoratieve scheiding (geen tekst nodig)
+CONTENT TYPES — exacte renderingsgedrag:
+
+  "text"      → headline + body. Tekst onderaan blok. tag badge bovenaan optioneel.
+                Gebruik voor: feature artikel, grote headlines, introductie.
+
+  "poster"    → foto als ACHTERGROND (40% opacity default), tekst eroverheen onderaan.
+                imagePosition MOET "bg" zijn. imageOpacity 40–70 aanbevolen.
+                Gebruik voor: hero shot met foto + krachtige headline.
+
+  "image"     → alleen foto, geen body. Optionele headline als dark gradient overlay.
+                Gebruik voor: pure foto-blokken zonder tekst.
+
+  "split"     → foto (45% breedte) naast tekst. imagePosition "left" of "right".
+                Gebruik voor: artikel met foto naast tekst.
+
+  "quote"     → grote quote met decoratief aanhalingsteken. Headline = de quote.
+                Altijd: italic:true, uppercase:false. Body = attribuut ("— CLUBvanONS").
+                Gebruik voor: krachtige uitspraken, community stemmen.
+
+  "divider"   → decoratieve scheiding. Optionele headline als label ertussen.
+                Gebruik voor: visuele pauze tussen secties.
+
+  "events"    → AUTOMATISCH gevuld met content.events[] array. Toont dag/maand + titel + detail.
+                headline = sectietitel. NOOIT events handmatig in body schrijven.
+
+  "crew"      → AUTOMATISCH gevuld met content.crew[] array. Cirkelvormige avatars + naam + rol.
+                headline = sectietitel. NOOIT crew handmatig schrijven.
+
+  "pakdemic"  → "Pak de Mic 🎤" sectie. Toont content.pakDeMicText (of block body als ingevuld).
+                Altijd oranje badge aanwezig. headline optioneel.
+
+  "buurtpost" → Bovenste helft: foto uit content.buurtpostImage (of block image).
+                Onderste helft: content.buurtpostHeadline + .buurtpostBody (of block headline/body).
+                Oranje "📍 Uit de wijk" badge hardcoded.
+
+  "terugblik" → AUTOMATISCH gevuld: foto-grid bovenaan uit content.flashbackImages[] (max 3 foto's,
+                geüpload door gebruiker via UI — GEEN image veld in card, dat wordt genegeerd).
+                Tekst onderaan: content.flashbackHeadline + .flashbackBody (of block headline/body).
+                ⚠️ "image" veld in terugblik card heeft GEEN EFFECT — foto's komen uit flashbackImages.
+
+  "joinus"    → "Doe mee" CTA sectie. Oranje knop hardcoded. headline = grote tekst.
+                body = beschrijving (automatisch ingevuld als leeg).
+                Gebruik voor: onderaan magazine als afsluiting.
+
+  ⛔ "customBlocks" — NOOIT GEBRUIKEN. Dit is verouderd. Gebruik altijd customRows.
 
 COLS SYSTEEM:
   12 = full width | 8+4 = 2/3 + 1/3 | 7+5 = feature split | 6+6 = gelijk | 4+4+4 = drieluik | 3+3+3+3 = vier

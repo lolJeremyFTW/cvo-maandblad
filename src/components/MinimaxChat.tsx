@@ -346,6 +346,41 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
     setInput("");
   }
 
+  // ── Client-side instant name detection ────────────────────────────────────
+  // Saves the user's name IMMEDIATELY (before AI responds) so they appear
+  // in "Bekende gebruikers" the moment they send their first message.
+
+  function tryDetectName(text: string): string | null {
+    const t = text.trim();
+    // Must be 1–3 words, letters only (includes accented chars), no punctuation
+    if (!/^[a-zA-ZÀ-ÖØ-öø-ÿ\s'-]{1,30}$/.test(t)) return null;
+    const words = t.split(/\s+/);
+    if (words.length > 3) return null;
+    // Reject obvious command words / greetings that aren't names
+    const notNames = ["hoi", "hallo", "hey", "hi", "ja", "nee", "ok", "oke", "oké",
+      "goed", "zet", "maak", "bouw", "voeg", "schrijf", "test", "help"];
+    if (notNames.includes(t.toLowerCase())) return null;
+    // Capitalise first letter of each word → treat as proper name
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+
+  function instantSaveName(name: string) {
+    setProfiles((prev) => {
+      // Don't overwrite an existing profile
+      if (prev[name]) return prev;
+      const newProfile: UserProfile = {
+        name,
+        preferences: [],
+        lastSeen: new Date().toLocaleDateString("nl-NL"),
+      };
+      const next = { ...prev, [name]: newProfile };
+      saveProfiles(next);
+      return next;
+    });
+    setActiveUserName(name);
+    setActiveUserNameState(name);
+  }
+
   // ── Image upload ───────────────────────────────────────────────────────────
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -367,6 +402,26 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
     if ((!input.trim() && !pendingImage) || loading) return;
     const userContent = input.trim() || (pendingImage ? "Analyseer deze afbeelding en geef suggesties voor het magazine." : "");
     const snapshot = contentRef.current ? { ...contentRef.current } : undefined;
+
+    // ── Instant name detection (no AI needed) ─────────────────────────────
+    // If we don't know the user yet and the message looks like a name, save it NOW
+    if (!activeUserName && input.trim()) {
+      const detectedName = tryDetectName(input.trim());
+      if (detectedName) {
+        instantSaveName(detectedName);
+      }
+    }
+    // Also detect "ik ben [naam]" / "mijn naam is [naam]" patterns
+    if (!activeUserName) {
+      const nameMatch = input.trim().match(
+        /(?:ik ben|mijn naam is|ik heet|noem mij|call me)\s+([a-zA-ZÀ-ÖØ-öø-ÿ\s'-]{1,20})/i
+      );
+      if (nameMatch) {
+        const extracted = nameMatch[1].trim();
+        const capitalised = extracted.charAt(0).toUpperCase() + extracted.slice(1);
+        instantSaveName(capitalised);
+      }
+    }
 
     const userMsg: Message = {
       role: "user",

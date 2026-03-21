@@ -920,7 +920,7 @@ function renderCustom(
   return (
     <div style={{ padding: pad, display: "flex", flexDirection: "column", gap }}>
       {rows.map((row, rowIdx) => (
-        <div key={row.id} style={{ display: "flex", height: row.heightPx, gap }}>
+        <div key={row.id} style={{ display: "flex", height: row.heightPx, gap, overflow: "hidden" }}>
           {row.cards.map((card, cardIdx) => (
             <CustomBlockView
               key={card.id}

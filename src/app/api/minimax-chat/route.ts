@@ -343,7 +343,8 @@ LAAG 4 — ACCENT (70–120px): quote, CTA, divider.
   headlineSize: 16–24px. Padding "sm" of "md".
 
 GOUDEN FORMULE:
-  hero (320px) + verhaal (200px) + community (220px) + crew (180px) + accent (80px) = 1000px ✓
+  hero (320px) + verhaal (200px) + community (200px) + crew (200px) + accent (120px) = 1040px ✓
+  Gebruik customGap: 4 voor ademruimte tussen blokken (voorkomt visuele overlap).
 
 KLEURRITME — niet twee keer dezelfde stijl achter elkaar:
   Sterk: black → orange → mint → cream → black
@@ -358,51 +359,59 @@ TEKST SCHAALT MEE:
   80px blok: headlineSize 18–22, padding "sm", GEEN body
   Vuistregel: headlineSize ≤ blok-hoogte ÷ 6
 
-CONTENT TYPES — exacte renderingsgedrag:
+CONTENT TYPES — exacte renderingsgedrag + MINIMUM HOOGTES:
+
+  ⚠️ MINIMALE HOOGTES: Als een blok te klein is voor zijn inhoud, wordt de inhoud afgesneden.
+  Gebruik ALTIJD voldoende hoogte. De heightPx van de ROW bepaalt de hoogte van ALLE cards erin.
 
   "text"      → headline + body. Tekst onderaan blok. tag badge bovenaan optioneel.
+                MIN: 80px (alleen headline). Aanbevolen: 160–320px voor headline + body.
                 Gebruik voor: feature artikel, grote headlines, introductie.
 
-  "poster"    → foto als ACHTERGROND (40% opacity default), tekst eroverheen onderaan.
-                imagePosition MOET "bg" zijn. imageOpacity 40–70 aanbevolen.
+  "poster"    → foto als ACHTERGROND, tekst eroverheen onderaan.
+                imagePosition MOET "bg" zijn. imageOpacity 40–65 zodat tekst leesbaar blijft.
+                MIN: 200px. Aanbevolen: 280–360px voor hero shots.
                 Gebruik voor: hero shot met foto + krachtige headline.
 
-  "image"     → alleen foto, geen body. Optionele headline als dark gradient overlay.
-                Gebruik voor: pure foto-blokken zonder tekst.
+  "image"     → alleen foto, optionele headline als gradient overlay onderaan.
+                MIN: 150px. Aanbevolen: 200–360px.
 
   "split"     → foto (45% breedte) naast tekst. imagePosition "left" of "right".
-                Gebruik voor: artikel met foto naast tekst.
+                MIN: 160px. Aanbevolen: 200–280px.
 
-  "quote"     → grote quote met decoratief aanhalingsteken. Headline = de quote.
-                Altijd: italic:true, uppercase:false. Body = attribuut ("— CLUBvanONS").
-                Gebruik voor: krachtige uitspraken, community stemmen.
+  "quote"     → grote quote, decoratief aanhalingsteken. Headline = de quote.
+                italic:true, uppercase:false. Body = attribuut ("— CLUBvanONS").
+                MIN: 100px. Aanbevolen: 110–140px.
 
-  "divider"   → decoratieve scheiding. Optionele headline als label ertussen.
-                Gebruik voor: visuele pauze tussen secties.
+  "divider"   → decoratieve scheiding. headline optioneel als label.
+                MIN: 40px. Aanbevolen: 60–80px.
 
-  "events"    → AUTOMATISCH gevuld met content.events[] array. Toont dag/maand + titel + detail.
-                headline = sectietitel. NOOIT events handmatig in body schrijven.
+  "events"    → AUTOMATISCH gevuld met content.events[]. Toont dag/maand + titel + detail per event.
+                headline = sectietitel. NOOIT events handmatig schrijven.
+                MIN: 160px (3 events). Meer events → meer hoogte nodig (40px per event).
 
-  "crew"      → AUTOMATISCH gevuld met content.crew[] array. Cirkelvormige avatars + naam + rol.
+  "crew"      → AUTOMATISCH gevuld met content.crew[]. Cirkelvormige avatars + naam + rol.
                 headline = sectietitel. NOOIT crew handmatig schrijven.
+                MIN: 160px (≤3 leden). 4–5 leden: MIN 200px. 6+ leden: MIN 220px.
+                ⚠️ Te klein = namen lopen buiten het blok, cirkels overlappen visueel!
 
-  "pakdemic"  → "Pak de Mic 🎤" sectie. Toont content.pakDeMicText (of block body als ingevuld).
-                Altijd oranje badge aanwezig. headline optioneel.
+  "pakdemic"  → "Pak de Mic 🎤" sectie. Toont content.pakDeMicText (of block body).
+                MIN: 130px. Aanbevolen: 150–200px.
 
-  "buurtpost" → Bovenste helft: foto uit content.buurtpostImage (of block image).
-                Onderste helft: content.buurtpostHeadline + .buurtpostBody (of block headline/body).
-                Oranje "📍 Uit de wijk" badge hardcoded.
+  "buurtpost" → Bovenste 50%: foto (content.buurtpostImage of block image).
+                Onderste 50%: buurtpostHeadline + buurtpostBody (of block headline/body).
+                MIN: 160px. Aanbevolen: 200–240px.
 
-  "terugblik" → AUTOMATISCH gevuld: foto-grid bovenaan uit content.flashbackImages[] (max 3 foto's,
-                geüpload door gebruiker via UI — GEEN image veld in card, dat wordt genegeerd).
-                Tekst onderaan: content.flashbackHeadline + .flashbackBody (of block headline/body).
+  "terugblik" → AUTOMATISCH: foto-grid bovenaan uit content.flashbackImages[] (max 3, geüpload via UI).
+                Tekst onderaan: flashbackHeadline + flashbackBody.
                 ⚠️ "image" veld in terugblik card heeft GEEN EFFECT — foto's komen uit flashbackImages.
+                MIN: 180px. Aanbevolen: 200–260px.
 
-  "joinus"    → "Doe mee" CTA sectie. Oranje knop hardcoded. headline = grote tekst.
-                body = beschrijving (automatisch ingevuld als leeg).
-                Gebruik voor: onderaan magazine als afsluiting.
+  "joinus"    → CTA sectie. Oranje "Doe mee →" knop hardcoded. headline = grote tekst.
+                MIN: 110px. Aanbevolen: 120–150px.
+                ⚠️ 80px is te klein — tekst wordt afgesneden!
 
-  ⛔ "customBlocks" — NOOIT GEBRUIKEN. Dit is verouderd. Gebruik altijd customRows.
+  ⛔ "customBlocks" — NOOIT GEBRUIKEN. Verouderd. Gebruik altijd customRows.
 
 COLS SYSTEEM:
   12 = full width | 8+4 = 2/3 + 1/3 | 7+5 = feature split | 6+6 = gelijk | 4+4+4 = drieluik | 3+3+3+3 = vier
@@ -428,7 +437,7 @@ Hier is het magazine — 5 lagen, 1000px, alle secties.
   "template": "Custom",
   "bannerText": "Clubnights — Buurtpost — Crew — Agenda",
   "customPadding": 0,
-  "customGap": 0,
+  "customGap": 4,
   "customRows": [
     {
       "id": "row-hero",
@@ -580,16 +589,16 @@ Hier is het magazine — 5 lagen, 1000px, alle secties.
     },
     {
       "id": "row-cta",
-      "heightPx": 80,
+      "heightPx": 120,
       "cards": [
         {
           "id": "card-cta",
           "cols": 12,
-          "heightPx": 80,
+          "heightPx": 120,
           "style": "orange",
           "contentType": "joinus",
           "headline": "DOE MEE",
-          "headlineSize": 22,
+          "headlineSize": 24,
           "body": "",
           "bodySize": 12,
           "textAlign": "center",

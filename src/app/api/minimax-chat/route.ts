@@ -876,15 +876,19 @@ KRITIEKE REGELS customRows
   }
 
   // ── Build messages ────────────────────────────────────────────────────────────
+  // Append a hard reminder to the last user message so the model sees it
+  // immediately before it starts generating — highest-weight position.
+  const EDIT_REMINDER = "\n\n[REMINDER: Als dit een aanpassings- of bouwverzoek is, sluit dan je antwoord VERPLICHT af met een geldig <edit>…</edit> blok. Geen <edit> blok = gefaald.]";
+
   const formattedMessages = messages.map(
     (m: { role: string; content: string }, idx: number) => {
-      const isLastUser = idx === messages.length - 1 && m.role === "user" && imageBase64;
-      if (isLastUser) {
+      const isLast = idx === messages.length - 1 && m.role === "user";
+      if (isLast) {
         const userText = m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine.";
-        const content = vlmDescription
+        const withVlm = vlmDescription
           ? `${userText}\n\n[AFBEELDING ANALYSE]\n${vlmDescription}`
           : userText;
-        return { role: m.role, content };
+        return { role: m.role, content: withVlm + EDIT_REMINDER };
       }
       return { role: m.role, content: m.content };
     }
@@ -894,10 +898,10 @@ KRITIEKE REGELS customRows
 
   const maxTokens = 6000;
 
-  // ── Helper: call MiniMax with a 30 s timeout ────────────────────────────
+  // ── Helper: call MiniMax with a 45 s timeout ────────────────────────────
   async function callMiniMax(callModel: string, callMessages: object[], callMaxTokens: number) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30_000);
+    const timer = setTimeout(() => controller.abort(), 45_000);
     try {
       const res = await fetch(`${apiHost}/v1/text/chatcompletion_v2`, {
         method: "POST",
@@ -977,7 +981,7 @@ KRITIEKE REGELS customRows
     const isTimeout = err instanceof Error && err.name === "AbortError";
     return NextResponse.json({
       reply: isTimeout
-        ? "MiniMax reageert niet (timeout na 30 seconden). Probeer het opnieuw of verklein je vraag."
+        ? "MiniMax reageert niet (timeout na 45 seconden). Probeer het opnieuw of maak je vraag korter."
         : "Verbindingsfout met Minimax. Controleer je API key en netwerkverbinding.",
     });
   }

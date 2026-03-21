@@ -164,7 +164,13 @@ export default function Home() {
       </div>
 
       {/* ── Minimax AI Chat ── */}
-      <MinimaxChat isOpen={chatOpen} onClose={() => setChatOpen(false)} content={content} />
+      <MinimaxChat
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        content={content}
+        onEdit={(patch) => setContent((prev) => ({ ...prev, ...patch }))}
+        onUndo={(snapshot) => setContent((prev) => ({ ...prev, ...snapshot }))}
+      />
 
       {/* ── Chat toggle button ── */}
       <button

@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { X, Send, MessageCircle, Loader2, CheckCheck } from "lucide-react";
+import { X, Send, MessageCircle, Loader2, CheckCheck, Undo2 } from "lucide-react";
 import { MagazineContent } from "@/components/MagazinePreview";
 
 interface Message {
   role: "user" | "assistant";
-  content: string;       // visible text (edit blocks stripped out)
-  hasEdit?: boolean;     // true if this message applied an edit
+  content: string;
+  hasEdit?: boolean;
+  snapshot?: Partial<MagazineContent>; // content state before this edit (for undo)
 }
 
 interface MinimaxChatProps {
@@ -14,6 +15,7 @@ interface MinimaxChatProps {
   onClose: () => void;
   content?: MagazineContent;
   onEdit?: (patch: Partial<MagazineContent>) => void;
+  onUndo?: (snapshot: Partial<MagazineContent>) => void;
 }
 
 function buildMagazineContext(content: MagazineContent): string {
@@ -78,20 +80,38 @@ function parseEditBlock(raw: string): { text: string; patch: Partial<MagazineCon
     const patch = JSON.parse(match[1]) as Partial<MagazineContent>;
     return { text, patch };
   } catch {
-    // JSON invalid — still show the text, skip the edit
     return { text, patch: null };
   }
 }
 
-export default function MinimaxChat({ isOpen, onClose, content, onEdit }: MinimaxChatProps) {
+/** Detect if request is for a big build (full magazine, new layout, etc.) */
+function isBigBuild(input: string): boolean {
+  const keywords = ["volledig", "magazine", "lay-out", "layout", "template", "bouw", "opnieuw", "from scratch", "helemaal", "compleet", "alle blokken", "alle secties"];
+  const lower = input.toLowerCase();
+  return keywords.some((k) => lower.includes(k));
+}
+
+const SUGGESTIONS = [
+  "Bouw een volledig magazine voor deze maand",
+  "Maak een brutalist lay-out met 4 blokken",
+  "Voeg een grote quote sectie toe",
+  "Schrijf een nieuwe feature headline",
+  "Maak 3 events voor april",
+  "Zet template op Street stijl",
+  "Voeg een crew blok toe",
+  "Schrijf een buurtpost over de wijk",
+];
+
+export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }: MinimaxChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hoi! Ik ben je AI editor voor CLUBvanONS Magazine. Ik kan teksten schrijven én direct in je magazine aanpassen. Zeg maar wat — bijv. \"Schrijf een nieuwe headline voor het feature\" of \"Voeg 3 events toe voor april\".",
+      content: "Hoi! Ik ben je AI editor voor CLUBvanONS Magazine.\n\nIk kan teksten schrijven, het volledige magazine opbouwen, nieuwe lay-outs maken en custom blokken toevoegen — allemaal direct in je magazine. Zeg maar wat je wilt.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Aan het schrijven...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef(content);
   useEffect(() => { contentRef.current = content; }, [content]);
@@ -103,7 +123,12 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
   async function sendMessage() {
     if (!input.trim() || loading) return;
     const userMsg: Message = { role: "user", content: input.trim() };
+
+    // Snapshot current content for undo
+    const snapshot = contentRef.current ? { ...contentRef.current } : undefined;
+
     setMessages((prev) => [...prev, userMsg]);
+    setLoadingLabel(isBigBuild(input) ? "Magazine aan het bouwen..." : "Aan het schrijven...");
     setInput("");
     setLoading(true);
 
@@ -125,7 +150,6 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
       const raw: string = data.reply ?? "Sorry, er ging iets mis.";
       const { text, patch } = parseEditBlock(raw);
 
-      // Apply edit to the magazine if we got a valid patch
       let hasEdit = false;
       if (patch && onEdit && Object.keys(patch).length > 0) {
         onEdit(patch);
@@ -134,7 +158,12 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: text || "✓ Aanpassing toegepast.", hasEdit },
+        {
+          role: "assistant",
+          content: text || "✓ Aanpassing toegepast.",
+          hasEdit,
+          snapshot: hasEdit ? snapshot : undefined,
+        },
       ]);
     } catch {
       setMessages((prev) => [
@@ -151,7 +180,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
   return (
     <div
       style={{
-        position: "fixed", top: 0, right: 0, width: 380, height: "100vh",
+        position: "fixed", top: 0, right: 0, width: 390, height: "100vh",
         background: "#18181b", borderLeft: "2px solid #f97316",
         display: "flex", flexDirection: "column", zIndex: 9999,
         fontFamily: "sans-serif",
@@ -162,7 +191,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <MessageCircle size={18} color="white" />
           <span style={{ color: "white", fontWeight: 700, fontSize: 14 }}>AI Editor</span>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>kan je magazine bewerken</span>
+          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>bouwt & bewerkt je magazine</span>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "white" }}>
           <X size={18} />
@@ -172,21 +201,14 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
       {/* Context badge */}
       {content && (
         <div style={{ background: "#27272a", padding: "5px 14px", fontSize: 11, color: "#a1a1aa", borderBottom: "1px solid #3f3f46", flexShrink: 0 }}>
-          📄 Editie {content.edition} — {content.month} {content.year} · {content.crew.length} crew · {content.events.length} events
+          📄 Editie {content.edition} — {content.month} {content.year} · Template: {content.template} · {content.customRows.length} custom rijen
         </div>
       )}
 
       {/* Suggestions */}
       {messages.length === 1 && (
         <div style={{ padding: "10px 12px", borderBottom: "1px solid #27272a", display: "flex", flexWrap: "wrap", gap: 6, flexShrink: 0 }}>
-          {[
-            "Bouw een volledig magazine voor deze maand",
-            "Maak een brutalist lay-out met 4 blokken",
-            "Voeg een grote quote sectie toe",
-            "Schrijf een nieuwe feature headline",
-            "Maak 3 events voor april",
-            "Zet template op Street stijl",
-          ].map((s) => (
+          {SUGGESTIONS.map((s) => (
             <button
               key={s}
               onClick={() => { setInput(s); }}
@@ -207,7 +229,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
             <div
               style={{
-                maxWidth: "85%", padding: "8px 12px", borderRadius: 12,
+                maxWidth: "88%", padding: "8px 12px", borderRadius: 12,
                 background: m.role === "user" ? "#f97316" : "#27272a",
                 color: "white", fontSize: 13, lineHeight: 1.55,
                 borderBottomRightRadius: m.role === "user" ? 2 : 12,
@@ -217,11 +239,27 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
             >
               {m.content}
             </div>
-            {/* Edit applied badge */}
+            {/* Edit applied badge + undo */}
             {m.hasEdit && (
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: "#22c55e", fontSize: 11 }}>
-                <CheckCheck size={12} />
-                <span>Aanpassing toegepast in je magazine</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#22c55e", fontSize: 11 }}>
+                  <CheckCheck size={12} />
+                  <span>Aanpassing toegepast</span>
+                </div>
+                {m.snapshot && onUndo && (
+                  <button
+                    onClick={() => onUndo(m.snapshot!)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 3,
+                      background: "none", border: "1px solid #3f3f46",
+                      borderRadius: 4, padding: "2px 6px",
+                      color: "#71717a", fontSize: 10, cursor: "pointer",
+                    }}
+                  >
+                    <Undo2 size={10} />
+                    Ongedaan
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -229,7 +267,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
         {loading && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#71717a", fontSize: 12 }}>
             <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
-            <span>Aan het schrijven...</span>
+            <span>{loadingLabel}</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -241,7 +279,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit }: Minima
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendMessage())}
-          placeholder="Schrijf, pas aan, of vraag iets..."
+          placeholder="Bouw, schrijf, pas aan of vraag iets..."
           style={{
             flex: 1, background: "#27272a", border: "1px solid #3f3f46",
             borderRadius: 8, padding: "8px 12px", color: "white", fontSize: 13,

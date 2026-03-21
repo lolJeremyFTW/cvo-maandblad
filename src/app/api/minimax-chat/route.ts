@@ -295,18 +295,41 @@ Ik heb het magazine opgebouwd met een brutalist ontwerp en 4 secties.
 }
 </edit>
 
-VOORBEELD 3 — Nieuw blok toevoegen aan bestaande customRows (voeg toe aan array):
-Ik heb een quote blok toegevoegd onderaan.
+VOORBEELD 3 — Nieuw blok toevoegen aan bestaande customRows:
+BELANGRIJK: Neem ALLE bestaande rijen over uit de huidige magazine context, plus voeg de nieuwe toe.
+Ik heb een quote blok toegevoegd onderaan je huidige lay-out.
 <edit>
 {
   "customRows": [
-    ... BESTAANDE RIJEN ...,
     {
-      "id": "row-nieuw",
+      "id": "row-1",
+      "heightPx": 160,
+      "cards": [
+        {
+          "id": "card-1a",
+          "cols": 12,
+          "heightPx": 160,
+          "style": "black",
+          "contentType": "text",
+          "headline": "BESTAANDE SECTIE",
+          "headlineSize": 32,
+          "body": "Bestaande tekst blijft staan.",
+          "bodySize": 13,
+          "textAlign": "left",
+          "uppercase": true,
+          "italic": false,
+          "padding": "lg",
+          "borderTop": false,
+          "imagePosition": "left"
+        }
+      ]
+    },
+    {
+      "id": "row-quote",
       "heightPx": 120,
       "cards": [
         {
-          "id": "card-nieuw-a",
+          "id": "card-quote-a",
           "cols": 12,
           "heightPx": 120,
           "style": "orange",
@@ -326,7 +349,9 @@ Ik heb een quote blok toegevoegd onderaan.
     }
   ]
 }
-</edit>`;
+</edit>
+
+KRITIEKE REGEL voor customRows uitbreiden: De context hierboven bevat de volledige huidige customRows JSON. Kopieer die rijen VOLLEDIG over en voeg nieuwe toe. Laat nooit bestaande rijen weg tenzij de redacteur dat expliciet vraagt.`;
 
   const systemPrompt = magazineContext
     ? `${baseSystemPrompt}\n\n${magazineContext}`

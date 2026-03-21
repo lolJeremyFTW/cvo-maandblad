@@ -5,7 +5,7 @@ import MagazinePreview, { defaultContent, MagazineContent, CustomBlock, CustomRo
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
 import PasswordGate from "@/components/PasswordGate";
-import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut } from "lucide-react";
+import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut, Crosshair } from "lucide-react";
 
 // ── Defaults for any missing CustomBlock fields ──────────────────────────────
 const BLOCK_DEFAULTS: Omit<CustomBlock, "id" | "headline" | "body"> = {
@@ -129,6 +129,143 @@ function saveEditions(editions: SavedEdition[]) {
   safeSetItem(STORAGE_KEY, JSON.stringify(editions));
 }
 
+// ── Region Selector overlay ────────────────────────────────────────────────
+function RegionSelector({
+  onCapture,
+  onCancel,
+}: {
+  onCapture: (dataUrl: string) => void;
+  onCancel: () => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const [start, setStart] = useState({ x: 0, y: 0 });
+  const [current, setCurrent] = useState({ x: 0, y: 0 });
+  const [capturing, setCapturing] = useState(false);
+
+  // Cancel on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onCancel(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  const selRect = {
+    x: Math.min(start.x, current.x),
+    y: Math.min(start.y, current.y),
+    w: Math.abs(current.x - start.x),
+    h: Math.abs(current.y - start.y),
+  };
+
+  async function handleMouseUp(e: React.MouseEvent) {
+    if (!dragging) return;
+    setDragging(false);
+    const endX = e.clientX, endY = e.clientY;
+    const rect = {
+      x: Math.min(start.x, endX), y: Math.min(start.y, endY),
+      w: Math.abs(endX - start.x), h: Math.abs(endY - start.y),
+    };
+    if (rect.w < 20 || rect.h < 20) { onCancel(); return; }
+
+    // Find the magazine element and get its screen bounds
+    const mag = document.getElementById("magazine");
+    if (!mag) { onCancel(); return; }
+    const magRect = mag.getBoundingClientRect();
+
+    // Convert selection to fractions of the magazine's screen area (clamped 0–1)
+    const fx = Math.max(0, (rect.x - magRect.left) / magRect.width);
+    const fy = Math.max(0, (rect.y - magRect.top)  / magRect.height);
+    const fw = Math.min((rect.x + rect.w - magRect.left) / magRect.width, 1) - fx;
+    const fh = Math.min((rect.y + rect.h - magRect.top)  / magRect.height, 1) - fy;
+
+    if (fw <= 0 || fh <= 0) { onCancel(); return; }
+
+    setCapturing(true);
+    try {
+      // Dynamic import to keep SSR clean
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(mag, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+      });
+
+      // Crop canvas to the selection
+      const cx = Math.round(fx * canvas.width);
+      const cy = Math.round(fy * canvas.height);
+      const cw = Math.round(fw * canvas.width);
+      const ch = Math.round(fh * canvas.height);
+
+      const cropped = document.createElement("canvas");
+      cropped.width  = cw;
+      cropped.height = ch;
+      const ctx = cropped.getContext("2d");
+      if (!ctx) { onCancel(); return; }
+      ctx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+
+      onCapture(cropped.toDataURL("image/png"));
+    } catch {
+      onCancel();
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        cursor: capturing ? "wait" : "crosshair",
+        userSelect: "none",
+      }}
+      onMouseDown={(e) => {
+        setDragging(true);
+        setStart({ x: e.clientX, y: e.clientY });
+        setCurrent({ x: e.clientX, y: e.clientY });
+      }}
+      onMouseMove={(e) => { if (dragging) setCurrent({ x: e.clientX, y: e.clientY }); }}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Dark overlay around selection */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", pointerEvents: "none" }} />
+
+      {/* Instruction banner */}
+      {!capturing && (
+        <div style={{
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          background: "#1A1A1A", color: "white", padding: "10px 20px",
+          fontSize: 13, fontWeight: 700, fontFamily: "sans-serif",
+          border: "2px solid #F15B2B", letterSpacing: "0.02em", zIndex: 10001,
+          pointerEvents: "none", whiteSpace: "nowrap",
+        }}>
+          🎯 Teken een selectie op het magazine · Esc = annuleren
+        </div>
+      )}
+      {capturing && (
+        <div style={{
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          background: "#F15B2B", color: "white", padding: "10px 20px",
+          fontSize: 13, fontWeight: 700, fontFamily: "sans-serif", zIndex: 10001,
+          pointerEvents: "none",
+        }}>
+          Screenshot maken...
+        </div>
+      )}
+
+      {/* Selection rect */}
+      {selRect.w > 4 && selRect.h > 4 && (
+        <div style={{
+          position: "fixed",
+          left: selRect.x, top: selRect.y,
+          width: selRect.w, height: selRect.h,
+          border: "2px solid #F15B2B",
+          background: "rgba(241,91,43,0.08)",
+          boxShadow: "0 0 0 1px rgba(241,91,43,0.4)",
+          pointerEvents: "none", zIndex: 10000,
+        }} />
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [content, setContent] = useState<MagazineContent>(defaultContent);
   const [editions, setEditions] = useState<SavedEdition[]>([]);
@@ -138,6 +275,8 @@ export default function Home() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [zoom, setZoom] = useState(90);
+  const [regionSelectMode, setRegionSelectMode] = useState(false);
+  const [chatPendingImage, setChatPendingImage] = useState<{ dataUrl: string; mimeType: string } | null>(null);
 
   useEffect(() => {
     setEditions(loadEditions());
@@ -251,6 +390,14 @@ export default function Home() {
                   <Save size={12} /> Opslaan
                 </button>
               )}
+              {/* Selecteer gebied voor AI analyse */}
+              <button
+                onClick={() => setRegionSelectMode(true)}
+                className={`flex items-center gap-1 px-2 py-1.5 font-archivo-black text-[10px] uppercase tracking-tight border-[2px] transition-colors ${regionSelectMode ? "bg-cvo-orange text-white border-cvo-orange" : "border-cvo-black text-cvo-black hover:bg-cvo-black hover:text-cvo-cream"}`}
+                title="Selecteer een gebied op het magazine voor AI-analyse"
+              >
+                <Crosshair size={12} /> Selecteer
+              </button>
               {/* Print */}
               <button
                 onClick={() => window.print()}
@@ -339,6 +486,7 @@ export default function Home() {
           content={content}
           onEdit={(patch) => setContent((prev) => applyAiPatch(prev, patch))}
           onUndo={(snapshot) => setContent((prev) => applyAiPatch(prev, snapshot))}
+          externalPendingImage={chatPendingImage}
         />
       )}
 
@@ -358,6 +506,20 @@ export default function Home() {
         >
           <MessageCircle size={22} />
         </button>
+      )}
+
+      {/* Region selector overlay */}
+      {regionSelectMode && (
+        <RegionSelector
+          onCapture={(dataUrl) => {
+            setChatPendingImage({ dataUrl, mimeType: "image/png" });
+            setRegionSelectMode(false);
+            setChatOpen(true);
+            // Reset after a tick so MinimaxChat's useEffect picks it up once
+            setTimeout(() => setChatPendingImage(null), 100);
+          }}
+          onCancel={() => setRegionSelectMode(false)}
+        />
       )}
 
       {/* Edities Manager Modal */}

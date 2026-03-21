@@ -61,6 +61,7 @@ interface MinimaxChatProps {
   content?: MagazineContent;
   onEdit?: (patch: Partial<MagazineContent>) => void;
   onUndo?: (snapshot: Partial<MagazineContent>) => void;
+  externalPendingImage?: { dataUrl: string; mimeType: string } | null;
 }
 
 // ── Magazine context builder ──────────────────────────────────────────────────
@@ -70,9 +71,25 @@ function buildMagazineContext(content: MagazineContent): string {
     .map((e) => `  • ${e.day} ${e.month}: ${e.title}${e.detail ? ` — ${e.detail}` : ""}`)
     .join("\n");
   const crewList = content.crew.map((c) => `  • ${c.name} (${c.role})`).join("\n");
+
+  // Strip base64 images from customRows — replace with human-readable marker
+  const slimRows = content.customRows.map(row => ({
+    ...row,
+    cards: row.cards.map(card => ({
+      ...card,
+      image: card.image
+        ? (card.image.startsWith("data:") ? "[AFBEELDING AANWEZIG ✓]" : card.image)
+        : "",
+    })),
+  }));
   const customRowsJson = content.customRows.length > 0
-    ? JSON.stringify(content.customRows, null, 2)
+    ? JSON.stringify(slimRows, null, 2)
     : "  (geen custom rijen)";
+
+  // Summarise which standard-template image slots are filled
+  const hasMainImg   = !!content.mainFeatureImage;
+  const hasBuurtImg  = !!content.buurtpostImage;
+  const flashCount   = (content.flashbackImages ?? []).filter(Boolean).length;
 
   return `
 === HUIDIGE MAGAZINE INHOUD ===
@@ -81,6 +98,12 @@ Template: ${content.template}
 Banner: "${content.bannerText}"
 Logo: kleur=${content.logoColor}, positie=${content.logoPosition}, grootte=${content.logoSize}px, x=${content.logoX}, padding=${content.logoPadding}px
 Custom canvas: padding=${content.customPadding}px, gap=${content.customGap}px
+
+AFBEELDINGEN IN MAGAZINE:
+• Hoofdfeature foto: ${hasMainImg ? "✓ Afbeelding aanwezig" : "(leeg — geen foto)"}
+• Buurtpost foto:    ${hasBuurtImg ? "✓ Afbeelding aanwezig" : "(leeg — geen foto)"}
+• Terugblik foto's: ${flashCount} van 3 aanwezig
+• Custom blokken:   zie JSON hieronder (veld "image": "[AFBEELDING AANWEZIG ✓]" = foto aanwezig)
 
 CREW (${content.crew.length} leden):
 ${crewList || "  (geen crew ingevuld)"}
@@ -107,7 +130,7 @@ Tekst: "${content.flashbackBody?.slice(0, 200) || "(leeg)"}"
 OVER CLUBVANONS:
 "${content.companyDescription?.slice(0, 200) || "(leeg)"}"
 
-CUSTOM RIJEN (${content.customRows.length} rijen) — volledige JSON:
+CUSTOM RIJEN (${content.customRows.length} rijen) — volledige JSON (images vervangen door marker):
 ${customRowsJson}
 === EINDE MAGAZINE INHOUD ===`.trim();
 }
@@ -193,7 +216,7 @@ const SUGGESTIONS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }: MinimaxChatProps) {
+export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, externalPendingImage }: MinimaxChatProps) {
   // Profile state
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [activeUserName, setActiveUserNameState] = useState<string | null>(null);
@@ -213,6 +236,13 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
     setProfiles(p);
     setActiveUserNameState(a);
   }, []);
+
+  // Accept region captures from the parent (RegionSelector)
+  useEffect(() => {
+    if (externalPendingImage) {
+      setPendingImage(externalPendingImage);
+    }
+  }, [externalPendingImage]);
 
   // Build initial greeting based on whether we know the user
   const buildInitialMessage = (profile: UserProfile | null): string => {

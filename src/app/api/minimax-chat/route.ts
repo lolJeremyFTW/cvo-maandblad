@@ -3,6 +3,45 @@ import { NextRequest, NextResponse } from "next/server";
 // Allow up to 60 s on Vercel Pro (hobby plan is capped at 10 s regardless)
 export const maxDuration = 60;
 
+// ── Coding-plan vision endpoint (/v1/coding_plan/vlm) ─────────────────────────
+// This is the dedicated image-understanding API for MiniMax coding-plan users.
+// It accepts { prompt, image_url } where image_url is a data: URL or HTTPS URL.
+// The response has a "content" field with the analysis text.
+async function describeImageWithVlm(
+  imageDataUrl: string,
+  prompt: string,
+  apiKey: string,
+  apiHost: string,
+): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const res = await fetch(`${apiHost}/v1/coding_plan/vlm`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ prompt, image_url: imageDataUrl }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`VLM HTTP ${res.status}:`, err.slice(0, 300));
+      return null;
+    }
+    const data = await res.json() as Record<string, unknown>;
+    console.log("VLM response:", JSON.stringify(data).slice(0, 600));
+    // Response has a "content" field per the Coding-Plan MCP source
+    return (data.content as string | undefined) ?? null;
+  } catch (e) {
+    clearTimeout(timer);
+    console.error("VLM call failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const { messages, magazineContext, profileContext, imageBase64, imageMimeType } = await req.json();
 
@@ -13,8 +52,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const defaultModel  = process.env.MINIMAX_MODEL        ?? "MiniMax-Text-01";
-  const visionModel   = process.env.MINIMAX_VISION_MODEL ?? "MiniMax-VL-01";
+  const apiHost    = (process.env.MINIMAX_API_HOST ?? "https://api.minimaxi.chat").replace(/\/$/, "");
+  const defaultModel = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
 
   const baseSystemPrompt = `Je bent de ingebouwde AI-editor van CLUBvanONS Magazine — een urban community magazine uit Breda.
 Je hebt VOLLEDIGE SCHRIJFTOEGANG tot het magazine. Je kunt alle teksten aanpassen, het hele magazine opnieuw opbouwen, nieuwe templates instellen en nieuwe custom blokken en rijen toevoegen.
@@ -551,35 +590,39 @@ KRITIEKE REGELS customRows
     .filter(Boolean)
     .join("\n\n");
 
-  // ── Build messages: inject image into the last user message if present ──────
-  // MiniMax-Text-01 accepts inline base64 images via the image_url content type.
-  // Per MiniMax docs: text first, then image_url.
+  // ── If image present: call /v1/coding_plan/vlm to describe it ───────────────
+  // This is the coding-plan vision endpoint — no VL-01 plan needed.
+  // The description is injected as text so MiniMax-Text-01 can reason about it.
+  let vlmDescription: string | null = null;
+  if (imageBase64) {
+    const dataUrl = `data:${imageMimeType ?? "image/jpeg"};base64,${imageBase64}`;
+    const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+    const userPrompt = (lastUserMsg as { content?: string })?.content
+      || "Beschrijf deze afbeelding gedetailleerd in het Nederlands: wat zie je, sfeer, kleuren, mensen, locatie, stijl. Is de foto geschikt als magazine-afbeelding?";
+    vlmDescription = await describeImageWithVlm(dataUrl, userPrompt, apiKey, apiHost);
+    if (vlmDescription) {
+      console.log("VLM description:", vlmDescription.slice(0, 200));
+    } else {
+      console.warn("VLM unavailable — proceeding without image description");
+    }
+  }
+
+  // ── Build messages ────────────────────────────────────────────────────────────
   const formattedMessages = messages.map(
     (m: { role: string; content: string }, idx: number) => {
       const isLastUser = idx === messages.length - 1 && m.role === "user" && imageBase64;
       if (isLastUser) {
-        return {
-          role: m.role,
-          content: [
-            {
-              type: "text",
-              text: m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine.",
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${imageMimeType ?? "image/jpeg"};base64,${imageBase64}`,
-              },
-            },
-          ],
-        };
+        const userText = m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine.";
+        const content = vlmDescription
+          ? `${userText}\n\n[AFBEELDING ANALYSE]\n${vlmDescription}`
+          : userText;
+        return { role: m.role, content };
       }
       return { role: m.role, content: m.content };
     }
   );
 
-  // Use VL-01 when an image is present — Text-01 is text-only and silently ignores images
-  const activeModel = imageBase64 ? visionModel : defaultModel;
+  const activeModel = defaultModel;
 
   const maxTokens = 4000;
 
@@ -588,7 +631,7 @@ KRITIEKE REGELS customRows
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
     try {
-      const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
+      const res = await fetch(`${apiHost}/v1/text/chatcompletion_v2`, {
         method: "POST",
         signal: controller.signal,
         headers: {

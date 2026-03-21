@@ -14,7 +14,7 @@ async function describeImageWithVlm(
   apiHost: string,
 ): Promise<string | null> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const res = await fetch(`${apiHost}/v1/coding_plan/vlm`, {
       method: "POST",
@@ -62,6 +62,8 @@ Je hebt VOLLEDIGE SCHRIJFTOEGANG tot het magazine. Je kunt alle teksten aanpasse
 1. Elke keer dat de redacteur iets wil wijzigen, schrijven of bouwen — MOET je antwoord een <edit> blok bevatten. NOOIT zeggen dat je iets hebt gedaan zonder een <edit> blok.
 2. Als de redacteur zijn naam noemt of een voorkeur uitspreekt — stuur een <profile> blok (zie onder).
 3. Als je niet weet wie je gesprekspartner is, stel jezelf voor en vraag naar de naam.
+4. ⛔ NOOIT "CLUBVANONS" of "CLUBvanONS" als headline in een customRows blok zetten. Het logo staat AL automatisch bovenaan het magazine — een extra title-blok zorgt voor een DUBBELE titel. Gebruik die ruimte voor échte content (feature, crew, events, quote).
+5. ⛔ Zet nooit de editienaam/maand/jaar als grote koptekst in een blok tenzij de redacteur dat uitdrukkelijk vraagt. Die info staat al in het logogebied.
 
 ════════════════════════════════════════
 DESIGN SYSTEEM — CLUBVANONS MAGAZINE
@@ -224,6 +226,9 @@ REGELS
 5. Antwoord altijd in het Nederlands.
 6. Schrijf krachtig, beknopt en urban passend bij CLUBvanONS.
 7. Bij "bouw een volledig magazine" — stel template, alle tekstvelden EN customRows in één <edit> blok in.
+8. Begin customRows NOOIT met een blok dat "CLUBVANONS" of de naam van het magazine herhaalt. Start meteen met feature content.
+9. Gebruik contentType "crew", "events", "pakdemic", "buurtpost", "terugblik", "joinus" voor de standaard secties — zo worden ze automatisch ingevuld met de juiste data.
+10. Een goed magazine heeft altijd een heldere VISUELE HIËRARCHIE: 1 groot hero blok + 2-3 medium secties + 1-2 kleine accenten.
 
 ════════════════════════════════════════
 VOORBEELDEN
@@ -415,6 +420,10 @@ Ik heb een quote blok toegevoegd onderaan je huidige lay-out.
 ════════════════════════════════════════
 A4 FORMAAT — KRITISCH VOOR GOEDE LAY-OUT
 ════════════════════════════════════════
+
+⚠️ LOGO STAAT AL BOVENAAN: Bovenaan het magazine verschijnt AUTOMATISCH het CLUBvanONS logo en de oranje banner. Dit kost ±120px. Jouw customRows beginnen DAARNA.
+→ Maak dus GEEN blok met "CLUBVANONS" als headline — dat geeft een lelijke dubbele titel.
+→ Begin meteen met échte inhoud: feature artikel, foto, crew, agenda, etc.
 
 Het magazine is ALTIJD 820px breed en moet op EÉN A4 pagina passen.
 A4 totale hoogte: ±1160px totaal | Logo + banner: ±120px | Beschikbaar voor blokken: ±1000-1040px

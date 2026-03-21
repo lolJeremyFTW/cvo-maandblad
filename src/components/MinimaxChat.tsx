@@ -515,9 +515,9 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
       const magazineContext = contentRef.current ? buildMagazineContext(contentRef.current) : undefined;
       const profileContext = buildProfileContext(activeProfile);
 
-      // 45 s client-side timeout — gives server's 30 s timeout room to respond first
+      // 58 s client-side timeout — just under Vercel's 60 s maxDuration
       const controller = new AbortController();
-      const fetchTimer = setTimeout(() => controller.abort(), 45_000);
+      const fetchTimer = setTimeout(() => controller.abort(), 58_000);
 
       let data: { reply?: string };
       try {

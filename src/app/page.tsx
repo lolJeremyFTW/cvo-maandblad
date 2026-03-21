@@ -81,26 +81,34 @@ interface SavedEdition {
   content: MagazineContent;
 }
 
-/** Strip base64 image data from content before saving to localStorage.
- *  Keeps http(s) URLs intact, replaces data: URIs with a placeholder.
- *  This keeps localStorage well under the 5MB quota. */
+/** Slim magazine content for localStorage.
+ *  Images uploaded through the editor are compressed to ~60-90 KB on upload,
+ *  so they normally survive localStorage fine.
+ *  This function is a safety-net: only strips images that are STILL large
+ *  (> ~150 KB actual = > 200 000 base64 chars) — e.g. pasted raw files.
+ *  Also covers all image fields including standard-template slots. */
 function slimForStorage(content: MagazineContent): MagazineContent {
-  const stripImg = (s?: string) =>
-    s && s.startsWith("data:") ? "[base64-image]" : s;
+  // Only drop if it's base64 AND unexpectedly large (wasn't compressed)
+  const stripLarge = (s?: string): string | undefined =>
+    s && s.startsWith("data:") && s.length > 200_000 ? "[base64-image]" : s;
 
   return {
     ...content,
-    // Strip images from crew members
+    // Standard template images
+    mainFeatureImage: stripLarge(content.mainFeatureImage) ?? "",
+    buurtpostImage:   stripLarge(content.buurtpostImage)   ?? "",
+    flashbackImages:  (content.flashbackImages ?? []).map(img => stripLarge(img) ?? ""),
+    // Crew member photos
     crew: content.crew.map((c) => ({
       ...c,
-      photo: stripImg((c as Record<string, unknown>).photo as string | undefined),
+      photo: stripLarge((c as Record<string, unknown>).photo as string | undefined),
     })) as MagazineContent["crew"],
-    // Strip images from custom block rows
+    // Custom block images
     customRows: content.customRows.map((row) => ({
       ...row,
       cards: row.cards.map((card) => ({
         ...card,
-        image: stripImg(card.image),
+        image: stripLarge(card.image),
       })),
     })),
   };

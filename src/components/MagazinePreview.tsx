@@ -222,6 +222,30 @@ function h(c: MagazineContent, ed?: OnEdit) {
   return { $, $fi, $cr, $ev, $sp };
 }
 
+// ── Image compression — resize to maxPx on longest side, encode as JPEG ──
+// Typical result: 3 MB photo → 50–90 KB, small enough to survive localStorage.
+function compressImage(dataUrl: string, maxPx = 960, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > maxPx || h > maxPx) {
+        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(dataUrl); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // ── Foto slot with optional click-to-upload ──
 function FotoSlot({ label = "foto", className, src, onUpload, contain }: { label?: string; className?: string; src?: string; onUpload?: (v: string) => void; contain?: boolean }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -240,7 +264,9 @@ function FotoSlot({ label = "foto", className, src, onUpload, contain }: { label
       </div>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
         const f = e.target.files?.[0]; if (!f) return;
-        const r = new FileReader(); r.onload = () => onUpload(r.result as string); r.readAsDataURL(f); e.target.value = "";
+        const r = new FileReader();
+        r.onload = async () => { onUpload(await compressImage(r.result as string)); };
+        r.readAsDataURL(f); e.target.value = "";
       }} />
     </div>
   );
@@ -259,7 +285,9 @@ function CrewAvatar({ src, onUpload, bg = "bg-gray-100", border = "border-cvo-bl
           </div>
           <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
             const f = e.target.files?.[0]; if (!f) return;
-            const r = new FileReader(); r.onload = () => onUpload(r.result as string); r.readAsDataURL(f); e.target.value = "";
+            const r = new FileReader();
+            r.onload = async () => { onUpload(await compressImage(r.result as string)); };
+            r.readAsDataURL(f); e.target.value = "";
           }} />
         </>
       )}

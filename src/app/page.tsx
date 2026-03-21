@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import MagazinePreview, { defaultContent, MagazineContent, CustomBlock, CustomRow } from "@/components/MagazinePreview";
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
@@ -171,6 +171,30 @@ function saveEditions(editions: SavedEdition[]) {
   safeSetItem(STORAGE_KEY, JSON.stringify(editions));
 }
 
+// ── Compress a screenshot PNG to JPEG before sending to the AI ─────────────
+function compressScreenshot(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      // 512px keeps base64 payload well under MiniMax-VL-01's inline image limit
+      const MAX = 512;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(dataUrl); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // ── Region Selector overlay ────────────────────────────────────────────────
 function RegionSelector({
   onCapture,
@@ -230,7 +254,7 @@ function RegionSelector({
     if (wrapper) wrapper.style.zoom = "1";
 
     // Give the browser one paint cycle to apply the zoom reset
-    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise<void>(r => requestAnimationFrame(() => { requestAnimationFrame(() => r()); }));
 
     try {
       const html2canvas = (await import("html2canvas")).default;
@@ -257,7 +281,9 @@ function RegionSelector({
       if (!ctx) { onCancel(); return; }
       ctx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
 
-      onCapture(cropped.toDataURL("image/png"));
+      // Compress PNG → JPEG before handing off to AI
+      const compressed = await compressScreenshot(cropped.toDataURL("image/png"));
+      onCapture(compressed);
     } catch {
       if (wrapper) wrapper.style.zoom = prevZoom;
       setCapturing(false);
@@ -331,6 +357,10 @@ export default function Home() {
   const [regionSelectMode, setRegionSelectMode] = useState(false);
   const [chatPendingImage, setChatPendingImage] = useState<{ dataUrl: string; mimeType: string } | null>(null);
   const [chatInputHint, setChatInputHint] = useState<string | null>(null);
+  const [saveWarning, setSaveWarning] = useState(false);
+
+  // Debounce timer ref for localStorage writes
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setEditions(loadEditions());
@@ -341,8 +371,13 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Strip base64 images before storing — prevents QuotaExceededError
-    safeSetItem("cvo_magazine_current", JSON.stringify(slimForStorage(content)));
+    // Debounce auto-save — wait 600ms after last change to avoid blocking on every keystroke
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const ok = safeSetItem("cvo_magazine_current", JSON.stringify(slimForStorage(content)));
+      if (!ok) setSaveWarning(true);
+    }, 600);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [content]);
 
   const handleSave = () => {
@@ -376,11 +411,35 @@ export default function Home() {
     setShowManager(false);
   };
 
+  // Stable callback — avoids re-attaching Escape listener on every render
+  const handleRegionCapture = useCallback((dataUrl: string) => {
+    setChatPendingImage({ dataUrl, mimeType: "image/jpeg" });
+    setChatInputHint("Analyseer dit geselecteerde deel van het magazine:");
+    setRegionSelectMode(false);
+    setChatOpen(true);
+    setTimeout(() => { setChatPendingImage(null); setChatInputHint(null); }, 300);
+  }, []);
+
+  const handleRegionCancel = useCallback(() => setRegionSelectMode(false), []);
+
   return (
     <PasswordGate>
     <main className="flex h-screen bg-gray-200 overflow-hidden">
       {/* Left: Editor panel */}
       <EditorPanel content={content} onChange={setContent} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
+
+      {/* LocalStorage full warning */}
+      {saveWarning && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
+          background: "#ef4444", color: "white", padding: "8px 16px",
+          fontFamily: "sans-serif", fontSize: 13, fontWeight: 700,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          ⚠️ Opslag vol — afbeeldingen zijn te groot om op te slaan. Sla de editie handmatig op en verwijder oude edities.
+          <button onClick={() => setSaveWarning(false)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       {/* Center: Preview area — flex-1, scrolls both axes so magazine never wraps */}
       <div className="flex-1 h-screen overflow-y-auto overflow-x-auto p-8 print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white min-w-0">
@@ -552,10 +611,10 @@ export default function Home() {
           style={{
             position: "fixed", bottom: 24, right: 24,
             width: 52, height: 52, borderRadius: "50%",
-            background: "var(--color-cvo-orange, #f97316)",
+            background: "#F15B2B",
             border: "none", cursor: "pointer", color: "white",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(249,115,22,0.4)",
+            boxShadow: "0 4px 20px rgba(241,91,43,0.45)",
             zIndex: 10000,
           }}
         >
@@ -566,15 +625,8 @@ export default function Home() {
       {/* Region selector overlay */}
       {regionSelectMode && (
         <RegionSelector
-          onCapture={(dataUrl) => {
-            setChatPendingImage({ dataUrl, mimeType: "image/png" });
-            setChatInputHint("Analyseer dit geselecteerde deel van het magazine:");
-            setRegionSelectMode(false);
-            setChatOpen(true);
-            // Reset after a tick so MinimaxChat's useEffect picks it up once
-            setTimeout(() => { setChatPendingImage(null); setChatInputHint(null); }, 200);
-          }}
-          onCancel={() => setRegionSelectMode(false)}
+          onCapture={handleRegionCapture}
+          onCancel={handleRegionCancel}
         />
       )}
 

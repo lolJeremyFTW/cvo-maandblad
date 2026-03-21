@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Allow up to 60 s on Vercel Pro (hobby plan is capped at 10 s regardless)
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const { messages, magazineContext, profileContext, imageBase64, imageMimeType } = await req.json();
 
@@ -10,10 +13,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Use vision model when image is included
+  // MiniMax-Text-01 supports inline base64 images — no separate vision plan needed
   const defaultModel = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
-  const visionModel = process.env.MINIMAX_VISION_MODEL ?? "MiniMax-VL-01";
-  const model = imageBase64 ? visionModel : defaultModel;
 
   const baseSystemPrompt = `Je bent de ingebouwde AI-editor van CLUBvanONS Magazine — een urban community magazine uit Breda.
 Je hebt VOLLEDIGE SCHRIJFTOEGANG tot het magazine. Je kunt alle teksten aanpassen, het hele magazine opnieuw opbouwen, nieuwe templates instellen en nieuwe custom blokken en rijen toevoegen.
@@ -495,6 +496,48 @@ VOORBEELD — foto verwijderen uit blok "card-2a":
 </edit>
 
 ════════════════════════════════════════
+TEMPLATE REFERENTIE — NAMAAK ALS CUSTOM
+════════════════════════════════════════
+
+Als redacteur vraagt een template na te maken of aan te passen, gebruik dan als basis:
+
+STANDARD (klassieke lay-out, bewezen structuur):
+• Rij 1 – 280px: crew (cols:5, mint, contentType:"crew") | terugblik (cols:7, cream, contentType:"terugblik")
+• Rij 2 – 280px: main feature tekst (cols:7, black, contentType:"text", headlineSize:48) | hoofd foto (cols:5, cream, contentType:"image", imagePosition:"bg")
+• Rij 3 – 220px: buurtpost (cols:4, mint, contentType:"buurtpost") | events (cols:4, cream, contentType:"events") | pak de mic (cols:4, black, contentType:"pakdemic")
+Kenmerken: 3px borders, mint+cream+black mix, gebalanceerde kolommen
+
+BRUTALIST (rauw, hoog contrast):
+• Rij 1 – 90px: masthead banner (cols:12, black, contentType:"text", headlineSize:72, uppercase:true, tag:"OP STRAAT", padding:"lg")
+• Rij 2 – 300px: crew lijst (cols:5, orange, contentType:"crew", borderTop:true) | terugblik+foto grid (cols:7, cream, contentType:"terugblik", borderTop:true)
+• Rij 3 – 220px: buurtpost (cols:4, mint, borderTop:true) | events (cols:4, cream, borderTop:true) | pak de mic (cols:4, black, borderTop:true)
+Kenmerken: EXTREME contrast, veel borders, rauwe energie, geen zachte elementen
+
+STREET (urban, donker):
+• Rij 1 – 160px: crew (cols:12, orange, contentType:"crew", headline:"MEET THE CREW")
+• Rij 2 – 180px: terugblik (cols:12, black, contentType:"terugblik")
+• Rij 3 – 280px: main feature (cols:7, orange, contentType:"text", headlineSize:52) | hoofd foto (cols:5, transparent, contentType:"image", imagePosition:"bg")
+• Rij 4 – 150px: buurtpost (cols:4, black) | events (cols:4, black) | pak de mic (cols:4, black)
+Kenmerken: donker/oranje energie, urban sfeer, hoge impact
+
+COLLAGE (foto-heavy, dynamisch):
+• Rij 1 – 360px: crew kaart (cols:4, orange, contentType:"crew") | feature kaart (cols:4, black, contentType:"text", headlineSize:44) | terugblik kaart (cols:4, cream, contentType:"terugblik")
+• Rij 2 – 220px: buurtpost (cols:4, mint) | events (cols:4, cream) | pak de mic (cols:4, black)
+Kenmerken: kaarten-gevoel, levendige kleurmix, dynamisch raster
+
+FEATURE (één groot verhaal centraal):
+• Rij 1 – 360px: hero afbeelding (cols:12, black, contentType:"image", imagePosition:"bg", imageOpacity:65, headline:"[HOOFDTITEL]", headlineSize:56, textAlign:"center", padding:"lg")
+• Rij 2 – 200px: crew (cols:6, cream, contentType:"crew") | terugblik (cols:6, cream, contentType:"terugblik")
+• Rij 3 – 220px: buurtpost (cols:4, cream) | events (cols:4, cream) | pak de mic (cols:4, black)
+Kenmerken: één dominante hero foto, editoriaal gevoel
+
+MINIMALIST (rustig, veel witruimte):
+• Rij 1 – 100px: grote headline (cols:12, cream, contentType:"text", headlineSize:54, textAlign:"center", tag:"EDITIE XX", padding:"md", uppercase:false)
+• Rij 2 – 240px: crew (cols:4, cream, contentType:"crew") | feature tekst (cols:4, cream, contentType:"text") | terugblik (cols:4, cream, contentType:"terugblik")
+• Rij 3 – 240px: buurtpost (cols:4, cream) | events (cols:4, cream) | pak de mic (cols:4, cream)
+Kenmerken: ALLES cream achtergrond, minimale borders (zet borderTop:false), rustige typografie
+
+════════════════════════════════════════
 KRITIEKE REGELS customRows
 ════════════════════════════════════════
 
@@ -504,21 +547,24 @@ KRITIEKE REGELS customRows
 4. Verplichte velden per card: id, cols, heightPx, style, contentType, headline, headlineSize, body, bodySize, textAlign, uppercase, italic, padding, borderTop, imagePosition.
 5. Totaal rijhoogtes ≈ 1000px voor een volledige A4 pagina.`;
 
-  const systemPrompt = [
-    baseSystemPrompt,
-    profileContext ?? null,
-    magazineContext ?? null,
-  ].filter(Boolean).join("\n\n");
+  const systemPrompt = [baseSystemPrompt, profileContext ?? null, magazineContext ?? null]
+    .filter(Boolean)
+    .join("\n\n");
 
-  // Build messages array — inject image into last user message if provided
+  // ── Build messages: inject image into the last user message if present ──────
+  // MiniMax-Text-01 accepts inline base64 images via the image_url content type.
+  // Per MiniMax docs: text first, then image_url.
   const formattedMessages = messages.map(
     (m: { role: string; content: string }, idx: number) => {
-      const isLastUserMsg = idx === messages.length - 1 && m.role === "user" && imageBase64;
-      if (isLastUserMsg) {
+      const isLastUser = idx === messages.length - 1 && m.role === "user" && imageBase64;
+      if (isLastUser) {
         return {
           role: m.role,
           content: [
-            { type: "text", text: m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine." },
+            {
+              type: "text",
+              text: m.content || "Analyseer deze afbeelding en geef suggesties voor het magazine.",
+            },
             {
               type: "image_url",
               image_url: {
@@ -532,42 +578,90 @@ KRITIEKE REGELS customRows
     }
   );
 
+  const activeModel = defaultModel;
+
+  const maxTokens = 4000;
+
+  // ── Helper: call MiniMax with a 30 s timeout ────────────────────────────
+  async function callMiniMax(callModel: string, callMessages: object[], callMaxTokens: number) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: callModel,
+          messages: callMessages,
+          max_tokens: callMaxTokens,
+          temperature: 0.7,
+        }),
+      });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  }
+
+  // ── Extract reply string from MiniMax response ────────────────────────────
+  function extractReply(data: Record<string, unknown>, callModel: string): string {
+    const baseMsgErr =
+      (data.base_resp as Record<string, unknown>)?.status_code !== undefined &&
+      (data.base_resp as Record<string, unknown>).status_code !== 0
+        ? `MiniMax fout (code ${(data.base_resp as Record<string, unknown>).status_code}): ${(data.base_resp as Record<string, unknown>).status_msg}`
+        : null;
+    const rawContent = (data.choices as Array<{ message: { content: unknown } }>)?.[0]?.message?.content;
+    const contentStr = typeof rawContent === "string"
+      ? rawContent
+      : Array.isArray(rawContent)
+        ? (rawContent as Array<{ type: string; text?: string }>).map(p => p.text ?? "").join("")
+        : null;
+    return contentStr
+      ?? (data.reply as string | undefined)
+      ?? baseMsgErr
+      ?? `Onverwacht antwoord van MiniMax (model: ${callModel}): ${JSON.stringify(data).slice(0, 300)}`;
+  }
+
   try {
-    const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...formattedMessages,
-        ],
-        max_tokens: 4000,
-        temperature: 0.7,
-      }),
-    });
+    const builtMessages = [
+      { role: "system", content: systemPrompt },
+      ...formattedMessages,
+    ];
+
+    const res = await callMiniMax(activeModel, builtMessages, maxTokens);
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Minimax API HTTP error:", res.status, errText);
+      console.error(`MiniMax HTTP ${res.status} [model: ${activeModel}]:`, errText);
       return NextResponse.json({
-        reply: `Minimax API fout (${res.status}): ${errText.slice(0, 150)}`,
+        reply: `MiniMax API fout (${res.status}): ${errText.slice(0, 300)}`,
       });
     }
 
-    const data = await res.json();
-    const reply =
-      data.choices?.[0]?.message?.content ??
-      data.reply ??
-      "Geen antwoord ontvangen van Minimax.";
+    const data = await res.json() as Record<string, unknown>;
+    console.log(`MiniMax response [model: ${activeModel}]:`, JSON.stringify(data).slice(0, 1200));
+
+    // Catch application-level errors (200 OK but error body)
+    const baseMsgCheck = data.base_resp as Record<string, unknown> | undefined;
+    if (baseMsgCheck?.status_code !== undefined && baseMsgCheck.status_code !== 0) {
+      console.error("MiniMax base_resp error:", baseMsgCheck);
+    }
+
+    const reply = extractReply(data, activeModel);
     return NextResponse.json({ reply });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Minimax API error:", err);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
     return NextResponse.json({
-      reply: "Verbindingsfout met Minimax. Controleer je API key en netwerkverbinding.",
+      reply: isTimeout
+        ? "MiniMax reageert niet (timeout na 30 seconden). Probeer het opnieuw of verklein je vraag."
+        : "Verbindingsfout met Minimax. Controleer je API key en netwerkverbinding.",
     });
   }
 }

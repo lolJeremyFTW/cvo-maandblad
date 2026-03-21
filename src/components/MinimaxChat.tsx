@@ -3,6 +3,33 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, Send, MessageCircle, Loader2, CheckCheck, Undo2, UserCircle2, ChevronDown, ImageIcon, Trash2, Eye, RotateCcw } from "lucide-react";
 import { MagazineContent } from "@/components/MagazinePreview";
 
+// ── Compress image before sending to MiniMax API ─────────────────────────────
+// MiniMax-VL-01 has a strict inline-image size limit (~100 KB).
+// We target ≤512px on the longest side at 60% JPEG quality → typically 40-80 KB.
+function compressForApi(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      const MAX = 512;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(dataUrl); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.60));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // ── User profile types & storage ─────────────────────────────────────────────
 
 interface UserProfile {
@@ -246,9 +273,10 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
   }, [externalPendingImage]);
 
   // Pre-fill input when the parent supplies a hint (e.g. after region select)
+  // Uses functional update so it never overwrites text the user is already typing
   useEffect(() => {
     if (externalInputHint) {
-      setInput(externalInputHint);
+      setInput(prev => prev || externalInputHint);
     }
   }, [externalInputHint]);
 
@@ -467,9 +495,15 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
       imageDataUrl: pendingImage?.dataUrl,
     };
 
-    // Extract base64 from dataUrl (strip "data:image/...;base64,")
-    const imageBase64 = pendingImage?.dataUrl.split(",")[1] ?? null;
-    const imageMimeType = pendingImage?.mimeType ?? null;
+    // Compress image before sending to API to avoid payload-size errors
+    let imageBase64: string | null = null;
+    let imageMimeType: string | null = null;
+    if (pendingImage) {
+      const compressed = await compressForApi(pendingImage.dataUrl);
+      // After JPEG compression the mime type is always image/jpeg
+      imageBase64 = compressed.split(",")[1] ?? null;
+      imageMimeType = "image/jpeg";
+    }
 
     setMessages((prev) => [...prev, userMsg]);
     setLoadingLabel(isBigBuild(userContent) ? "Magazine aan het bouwen..." : pendingImage ? "Afbeelding analyseren..." : "Aan het schrijven...");
@@ -481,22 +515,32 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
       const magazineContext = contentRef.current ? buildMagazineContext(contentRef.current) : undefined;
       const profileContext = buildProfileContext(activeProfile);
 
-      const res = await fetch("/api/minimax-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          magazineContext,
-          profileContext,
-          imageBase64,
-          imageMimeType,
-        }),
-      });
+      // 45 s client-side timeout — gives server's 30 s timeout room to respond first
+      const controller = new AbortController();
+      const fetchTimer = setTimeout(() => controller.abort(), 45_000);
 
-      const data = await res.json();
+      let data: { reply?: string };
+      try {
+        const res = await fetch("/api/minimax-chat", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [...messages, userMsg].map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            magazineContext,
+            profileContext,
+            imageBase64,
+            imageMimeType,
+          }),
+        });
+        data = await res.json();
+      } finally {
+        clearTimeout(fetchTimer);
+      }
+
       const raw: string = data.reply ?? "Sorry, er ging iets mis.";
       const { text, patch, profileUpdate } = parseAllBlocks(raw);
 
@@ -522,8 +566,14 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
         hasEdit,
         snapshot: hasEdit ? snapshot : undefined,
       }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Verbindingsfout. Probeer opnieuw." }]);
+    } catch (err: unknown) {
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: isTimeout
+          ? "⏱️ Verzoek duurde te lang. Probeer opnieuw of maak je vraag korter."
+          : "🔌 Verbindingsfout. Controleer je internetverbinding en probeer opnieuw.",
+      }]);
     } finally {
       setLoading(false);
     }

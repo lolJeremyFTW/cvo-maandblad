@@ -82,13 +82,17 @@ function applyAiPatch(
   if (patch.customRows !== undefined) {
     const sanitized = sanitizeCustomRows(patch.customRows as unknown[]);
 
-    // Restore images the AI marked as "keep" — look them up from prev state
-    next.customRows = sanitized.map((row) => ({
+    // Restore images the AI marked as "keep" — look them up from prev state.
+    // Try ID-based match first (AI kept same row/card IDs), fall back to
+    // positional match (AI rebuilt with new IDs but same structure order).
+    next.customRows = sanitized.map((row, rowIdx) => ({
       ...row,
-      cards: row.cards.map((card) => {
+      cards: row.cards.map((card, cardIdx) => {
         if (isImageMarker(card.image)) {
-          const origRow  = prev.customRows.find(r => r.id === row.id);
-          const origCard = origRow?.cards.find(c => c.id === card.id);
+          const origRow  = prev.customRows.find(r => r.id === row.id)
+                        ?? prev.customRows[rowIdx];
+          const origCard = origRow?.cards.find(c => c.id === card.id)
+                        ?? origRow?.cards[cardIdx];
           return { ...card, image: origCard?.image ?? "" };
         }
         return card;
@@ -128,10 +132,10 @@ function slimForStorage(content: MagazineContent): MagazineContent {
     mainFeatureImage: stripLarge(content.mainFeatureImage) ?? "",
     buurtpostImage:   stripLarge(content.buurtpostImage)   ?? "",
     flashbackImages:  (content.flashbackImages ?? []).map(img => stripLarge(img) ?? ""),
-    // Crew member photos
+    // Crew member avatars (field is `avatar`, not `photo`)
     crew: content.crew.map((c) => ({
       ...c,
-      photo: stripLarge((c as Record<string, unknown>).photo as string | undefined),
+      avatar: stripLarge(c.avatar),
     })) as MagazineContent["crew"],
     // Custom block images
     customRows: content.customRows.map((row) => ({

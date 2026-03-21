@@ -78,7 +78,7 @@ EENVOUDIGE TEKSTVELDEN:
 • "flashbackBody"        — tekst terugblik
 • "companyDescription"   — over CLUBvanONS tekst
 • "template"             — een van de template-waarden hierboven
-• "logoColor"            — "Orange" | "Black" | "Gold" | "Green"
+• "logoColor"            — "Orange" | "Black" | "Mint" | "Cream"
 • "logoPosition"         — "Top" | "Bottom"
 • "logoSize"             — getal (px hoogte logo, bijv. 90)
 • "logoPadding"          — getal (px, mag negatief tot -25)

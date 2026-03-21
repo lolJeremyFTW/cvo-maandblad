@@ -189,11 +189,11 @@ export default function Home() {
       {/* Left: Editor panel */}
       <EditorPanel content={content} onChange={setContent} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
 
-      {/* Center: Preview area — flex-1, shrinks naturally when chat opens */}
-      <div className="flex-1 h-screen overflow-y-auto p-8 print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white min-w-0">
+      {/* Center: Preview area — flex-1, scrolls both axes so magazine never wraps */}
+      <div className="flex-1 h-screen overflow-y-auto overflow-x-auto p-8 print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white min-w-0">
 
-        {/* Toolbar */}
-        <div className="print:hidden max-w-[820px] mx-auto mb-5 bg-cvo-cream border-[3px] border-cvo-black" style={{ boxShadow: "4px 4px 0 #1a1a1a" }}>
+        {/* Toolbar — same 794px width as magazine so they align */}
+        <div className="print:hidden mx-auto mb-5 bg-cvo-cream border-[3px] border-cvo-black" style={{ width: 794, boxShadow: "4px 4px 0 #1a1a1a" }}>
           {/* Top row: label + action buttons */}
           <div className="flex justify-between items-center px-3 py-2 border-b-[2px] border-cvo-black/10">
             <div className="flex items-center gap-3">
@@ -310,14 +310,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Magazine — CSS zoom affects layout (unlike transform: scale) */}
+        {/* Magazine — fixed A4 width (794px), CSS zoom scales it for screen.
+            Never shrinks — center area scrolls horizontally if needed. */}
         <div
           id="magazine-zoom-wrapper"
-          className="print:max-w-none print:mx-0"
+          className="print:mx-0"
           style={{
-            maxWidth: 820,
+            width: 794,      // Fixed A4 pixel width — never squishes or wraps
             margin: "0 auto",
-            // CSS zoom: actually shrinks layout space, no clipping
             zoom: zoom / 100,
           }}
         >

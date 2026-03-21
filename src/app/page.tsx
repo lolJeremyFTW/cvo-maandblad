@@ -55,7 +55,23 @@ function sanitizeCustomRows(rows: unknown[]): CustomRow[] {
     .filter((row) => row.cards.length > 0);
 }
 
-/** Apply an AI patch safely — sanitize customRows and auto-set template */
+// Marker the AI sends when it wants to KEEP an existing image but can't include the raw base64
+const IMAGE_KEEP_MARKER = "[AFBEELDING AANWEZIG ✓]";
+// Legacy marker used by slimForStorage
+const IMAGE_LEGACY_MARKER = "[base64-image]";
+
+function isImageMarker(s?: string): boolean {
+  return s === IMAGE_KEEP_MARKER || s === IMAGE_LEGACY_MARKER;
+}
+
+/** Apply an AI patch safely — sanitize customRows and auto-set template.
+ *
+ *  Image handling:
+ *  - Card image = "" or missing  → clear the image (user asked to remove it)
+ *  - Card image = "[AFBEELDING AANWEZIG ✓]" or "[base64-image]" → keep the
+ *    original base64 from prev state (AI can't include raw base64, uses marker)
+ *  - Card image = real URL/base64 → use new value as-is
+ */
 function applyAiPatch(
   prev: MagazineContent,
   patch: Partial<MagazineContent>
@@ -64,7 +80,21 @@ function applyAiPatch(
 
   // Sanitize customRows if present
   if (patch.customRows !== undefined) {
-    next.customRows = sanitizeCustomRows(patch.customRows as unknown[]);
+    const sanitized = sanitizeCustomRows(patch.customRows as unknown[]);
+
+    // Restore images the AI marked as "keep" — look them up from prev state
+    next.customRows = sanitized.map((row) => ({
+      ...row,
+      cards: row.cards.map((card) => {
+        if (isImageMarker(card.image)) {
+          const origRow  = prev.customRows.find(r => r.id === row.id);
+          const origCard = origRow?.cards.find(c => c.id === card.id);
+          return { ...card, image: origCard?.image ?? "" };
+        }
+        return card;
+      }),
+    }));
+
     // Auto-switch to Custom template when AI sends customRows
     if (!patch.template) next.template = "Custom";
   }

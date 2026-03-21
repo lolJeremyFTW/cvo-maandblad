@@ -150,8 +150,15 @@ SCHEMA VOOR EEN BLOK (CustomBlock):
   "bodySize": 13,                // 9–18 (px)
   "tag": "NIEUWS",               // klein label badge boven headline (optioneel)
 
-  // Afbeelding (laat leeg als geen afbeelding nodig)
-  "image": "",                   // URL of base64 (laat leeg voor placeholder)
+  // Afbeelding
+  // ⚠️ AFBEELDING REGELS — LEES GOED:
+  // • Afbeelding VERWIJDEREN  → "image": ""
+  // • Afbeelding BEHOUDEN     → "image": "[AFBEELDING AANWEZIG ✓]"   ← gebruik deze exacte string
+  // • Nieuwe afbeelding       → "image": "https://..."
+  // Gebruik ALTIJD "[AFBEELDING AANWEZIG ✓]" als je de huidige foto wilt bewaren maar customRows
+  // opnieuw opbouwt. De frontend vervangt dit automatisch met de echte foto-data.
+  // Gebruik "" alleen als de redacteur uitdrukkelijk vraagt de foto te verwijderen.
+  "image": "[AFBEELDING AANWEZIG ✓]",  // of "" om te verwijderen, of nieuwe URL
   "imagePosition": "bg",         // "left" | "right" | "bg"
   "imageSize": 100,              // 10–200 (percentage grootte)
   "imageFit": "cover",           // "cover" | "contain" | "fill"
@@ -451,6 +458,41 @@ Als de redacteur een afbeelding meestuurt:
 3. Als de foto geschikt is als magazine-afbeelding: stel direct een lay-out voor die de foto gebruikt
 4. Gebruik de sfeer van de foto voor tekst — urban, community-gericht
 5. Als gevraagd: pas het magazine aan op basis van de afbeelding via een <edit> blok
+
+════════════════════════════════════════
+AFBEELDINGEN VERWIJDEREN OF BEWAREN
+════════════════════════════════════════
+
+STANDAARD TEMPLATE VELDEN (mainFeatureImage, buurtpostImage, flashbackImages):
+• Verwijderen: stuur het veld als lege string → "mainFeatureImage": ""
+• Voorbeeld: {"mainFeatureImage": ""} verwijdert de hoofdfoto
+
+CUSTOM BLOKKEN (image veld in customRows cards):
+• Je kunt de echte base64 data NOOIT zien of kopiëren — gebruik daarom altijd de marker:
+  - Foto BEWAREN  → "image": "[AFBEELDING AANWEZIG ✓]"   (frontend herstelt origineel)
+  - Foto VERWIJDEREN → "image": ""
+  - Nieuwe foto → "image": "https://..."
+• Als je customRows opnieuw opbouwt: geef elk blok dat een foto HAD de marker "[AFBEELDING AANWEZIG ✓]"
+  tenzij de redacteur vraagt die foto te verwijderen.
+
+VOORBEELD — foto verwijderen uit blok "card-2a":
+<edit>
+{
+  "template": "Custom",
+  "customRows": [
+    {
+      "id": "row-1",
+      "heightPx": 200,
+      "cards": [{"id": "card-1a", "cols": 12, "heightPx": 200, "image": "[AFBEELDING AANWEZIG ✓]", ...}]
+    },
+    {
+      "id": "row-2",
+      "heightPx": 300,
+      "cards": [{"id": "card-2a", "cols": 12, "heightPx": 300, "image": "", ...}]
+    }
+  ]
+}
+</edit>
 
 ════════════════════════════════════════
 KRITIEKE REGELS customRows

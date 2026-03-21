@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import MagazinePreview, { defaultContent, MagazineContent } from "@/components/MagazinePreview";
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
-import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle } from "lucide-react";
+import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut } from "lucide-react";
 
 const STORAGE_KEY = "cvo_magazine_editions";
 
@@ -36,6 +36,8 @@ export default function Home() {
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [zoom, setZoom] = useState(90);
+  const CHAT_W = 390; // must match MinimaxChat width
 
   useEffect(() => {
     setEditions(loadEditions());
@@ -86,8 +88,15 @@ export default function Home() {
     <main className="flex h-screen bg-gray-200 overflow-hidden">
       <EditorPanel content={content} onChange={setContent} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
 
-      {/* Preview area */}
-      <div className="flex-1 h-screen overflow-y-auto p-10 print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white">
+      {/* Preview area — paddingRight grows when chat is open so preview shifts left */}
+      <div
+        className="flex-1 h-screen overflow-y-auto print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white"
+        style={{
+          padding: 40,
+          paddingRight: chatOpen ? CHAT_W + 24 : 40,
+          transition: "padding-right 0.3s ease",
+        }}
+      >
 
         {/* Toolbar */}
         <div className="print:hidden max-w-[820px] mx-auto mb-6 flex justify-between items-center bg-cvo-cream p-3 border-[3px] border-cvo-black" style={{ boxShadow: "4px 4px 0 #1a1a1a" }}>
@@ -99,7 +108,31 @@ export default function Home() {
               Editie {content.edition} — {content.month} {content.year}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* Zoom controls */}
+            <div className="flex items-center border-[2px] border-gray-300 overflow-hidden">
+              <button
+                onClick={() => setZoom(z => Math.max(40, z - 10))}
+                className="px-2 py-2 hover:bg-gray-100 transition-colors text-gray-500"
+                title="Uitzoomen"
+              >
+                <ZoomOut size={13} />
+              </button>
+              <button
+                onClick={() => setZoom(100)}
+                className="px-2 py-1 font-archivo-black text-[10px] text-gray-500 hover:bg-gray-100 transition-colors min-w-[38px] text-center"
+                title="Reset naar 100%"
+              >
+                {zoom}%
+              </button>
+              <button
+                onClick={() => setZoom(z => Math.min(150, z + 10))}
+                className="px-2 py-2 hover:bg-gray-100 transition-colors text-gray-500"
+                title="Inzoomen"
+              >
+                <ZoomIn size={13} />
+              </button>
+            </div>
             {/* Reset naar standaard */}
             <button
               onClick={() => {
@@ -157,7 +190,17 @@ export default function Home() {
         </div>
 
         {/* Magazine */}
-        <div className="max-w-[820px] mx-auto print:max-w-none print:mx-0">
+        <div
+          className="print:max-w-none print:mx-0"
+          style={{
+            maxWidth: 820,
+            margin: "0 auto",
+            transformOrigin: "top center",
+            transform: `scale(${zoom / 100})`,
+            // Compensate height so scrollable area stays correct
+            marginBottom: `calc(${zoom / 100 - 1} * -50%)`,
+          }}
+        >
           <MagazinePreview content={content} onEdit={(patch) => setContent(prev => ({ ...prev, ...patch }))} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
         </div>
         <div className="h-16 print:hidden" />

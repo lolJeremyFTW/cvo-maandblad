@@ -91,6 +91,18 @@ function isBigBuild(input: string): boolean {
   return keywords.some((k) => lower.includes(k));
 }
 
+/** Detect if user is asking for a change (vs just a question) */
+function isEditRequest(input: string): boolean {
+  const keywords = [
+    "zet", "maak", "schrijf", "voeg", "verander", "pas", "update", "bouw",
+    "geef", "verwijder", "vul", "aanpas", "wijzig", "stel", "template",
+    "headline", "tekst", "blok", "sectie", "layout", "lay-out", "events",
+    "crew", "banner", "style", "stijl"
+  ];
+  const lower = input.toLowerCase();
+  return keywords.some((k) => lower.includes(k));
+}
+
 const SUGGESTIONS = [
   "Bouw een volledig magazine voor deze maand",
   "Maak een brutalist lay-out met 4 blokken",
@@ -156,11 +168,16 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
         hasEdit = true;
       }
 
+      // Warn if user asked for an edit but AI didn't send one
+      const noEditWarning = !hasEdit && isEditRequest(userMsg.content)
+        ? "\n\n⚠️ De AI paste niets aan. Typ je verzoek opnieuw of wees specifieker."
+        : "";
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: text || "✓ Aanpassing toegepast.",
+          content: (text || "✓ Aanpassing toegepast.") + noEditWarning,
           hasEdit,
           snapshot: hasEdit ? snapshot : undefined,
         },

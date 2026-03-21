@@ -741,12 +741,17 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
         {messages.map((m, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
             {/* Image preview in message */}
-            {m.imageDataUrl && (
+            {m.imageDataUrl && m.imageDataUrl !== "[afbeelding]" && (
               <img
                 src={m.imageDataUrl}
                 alt="Uploaded"
                 style={{ maxWidth: 200, maxHeight: 140, borderRadius: 8, marginBottom: 4, objectFit: "cover", border: "1px solid #3f3f46" }}
               />
+            )}
+            {m.imageDataUrl === "[afbeelding]" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#71717a", background: "#27272a", borderRadius: 6, padding: "4px 8px", marginBottom: 4 }}>
+                <ImageIcon size={11} /> afbeelding
+              </div>
             )}
             <div style={{
               maxWidth: "88%", padding: "8px 12px", borderRadius: 12,

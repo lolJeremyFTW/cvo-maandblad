@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // MiniMax-Text-01 supports inline base64 images — no separate vision plan needed
-  const defaultModel = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
+  const defaultModel  = process.env.MINIMAX_MODEL        ?? "MiniMax-Text-01";
+  const visionModel   = process.env.MINIMAX_VISION_MODEL ?? "MiniMax-VL-01";
 
   const baseSystemPrompt = `Je bent de ingebouwde AI-editor van CLUBvanONS Magazine — een urban community magazine uit Breda.
 Je hebt VOLLEDIGE SCHRIJFTOEGANG tot het magazine. Je kunt alle teksten aanpassen, het hele magazine opnieuw opbouwen, nieuwe templates instellen en nieuwe custom blokken en rijen toevoegen.
@@ -578,7 +578,8 @@ KRITIEKE REGELS customRows
     }
   );
 
-  const activeModel = defaultModel;
+  // Use VL-01 when an image is present — Text-01 is text-only and silently ignores images
+  const activeModel = imageBase64 ? visionModel : defaultModel;
 
   const maxTokens = 4000;
 
@@ -647,10 +648,15 @@ KRITIEKE REGELS customRows
     const data = await res.json() as Record<string, unknown>;
     console.log(`MiniMax response [model: ${activeModel}]:`, JSON.stringify(data).slice(0, 1200));
 
-    // Catch application-level errors (200 OK but error body)
+    // Surface application-level errors (200 OK but error in body)
     const baseMsgCheck = data.base_resp as Record<string, unknown> | undefined;
     if (baseMsgCheck?.status_code !== undefined && baseMsgCheck.status_code !== 0) {
-      console.error("MiniMax base_resp error:", baseMsgCheck);
+      const code = baseMsgCheck.status_code;
+      const msg  = baseMsgCheck.status_msg as string ?? "onbekende fout";
+      console.error(`MiniMax base_resp error [model: ${activeModel}]:`, baseMsgCheck);
+      return NextResponse.json({
+        reply: `MiniMax fout (code ${code}): ${msg}`,
+      });
     }
 
     const reply = extractReply(data, activeModel);

@@ -30,7 +30,7 @@ MERKKLEUREN CLUBVANONS (exacte hex — gebruik dit bij customBg of als je een kl
 • Transparant        → stijl: "transparent"
 
 Als de redacteur zegt "oranje", "onze oranje", "de oranje kleur" — gebruik dan ALTIJD #F15B2B.
-Als de redacteur zegt "mint", "groen", "turquoise" — gebruik #ACDCCE.
+Als de redacteur zegt "mint", "blauw", "onze blauwe kleur", "groen", "turquoise" — gebruik #ACDCCE (stijl: "mint").
 Als de redacteur zegt "cream", "licht", "wit" — gebruik #FEFDED.
 Je kunt ook altijd customBg gebruiken voor elke willekeurige hex kleur.
 

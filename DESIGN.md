@@ -14,8 +14,7 @@
 | Oranje      | `#F15B2B` | Hoofdkleur, CTA, accenten, actieve elementen |
 | Zwart       | `#1A1A1A` | Tekst, kaders, donkere vlakken               |
 | Cream       | `#FEFDED` | Lichte achtergrond, subtiele secties         |
-| Mint/Groen  | `#ACDCCE` | Frisse accenten, secundaire highlights       |
-| Blauw       | `#VOEGJOUWKLEURIN` | Primaire merkleur, koppen, grote vlakken |
+| Mint / Blauw | `#ACDCCE` | Frisse accenten, secundaire highlights. Intern ook wel "blauw" genoemd. |
 
 > ✏️ Pas de hex-waarden hierboven aan als het merk evolueert.
 

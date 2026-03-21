@@ -176,9 +176,10 @@ function RegionSelector({
   onCancel: () => void;
 }) {
   const [dragging, setDragging] = useState(false);
-  const [start, setStart] = useState({ x: 0, y: 0 });
-  const [current, setCurrent] = useState({ x: 0, y: 0 });
+  const [start, setStart]       = useState({ x: 0, y: 0 });
+  const [current, setCurrent]   = useState({ x: 0, y: 0 });
   const [capturing, setCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState(false);
 
   // Cancel on Escape
   useEffect(() => {
@@ -200,50 +201,65 @@ function RegionSelector({
     const endX = e.clientX, endY = e.clientY;
     const rect = {
       x: Math.min(start.x, endX), y: Math.min(start.y, endY),
-      w: Math.abs(endX - start.x), h: Math.abs(endY - start.y),
+      w: Math.abs(endX - start.x),  h: Math.abs(endY - start.y),
     };
     if (rect.w < 20 || rect.h < 20) { onCancel(); return; }
 
-    // Find the magazine element and get its screen bounds
-    const mag = document.getElementById("magazine");
+    const mag     = document.getElementById("magazine");
+    const wrapper = document.getElementById("magazine-zoom-wrapper") as HTMLElement | null;
     if (!mag) { onCancel(); return; }
-    const magRect = mag.getBoundingClientRect();
 
-    // Convert selection to fractions of the magazine's screen area (clamped 0–1)
+    // Compute selection as a fraction of the magazine's SCREEN bounding rect
+    const magRect = mag.getBoundingClientRect();
     const fx = Math.max(0, (rect.x - magRect.left) / magRect.width);
     const fy = Math.max(0, (rect.y - magRect.top)  / magRect.height);
     const fw = Math.min((rect.x + rect.w - magRect.left) / magRect.width, 1) - fx;
     const fh = Math.min((rect.y + rect.h - magRect.top)  / magRect.height, 1) - fy;
-
     if (fw <= 0 || fh <= 0) { onCancel(); return; }
 
     setCapturing(true);
+
+    // ── Critical fix: html2canvas is confused by CSS zoom on the parent wrapper.
+    // Temporarily reset zoom → 1 so it renders the magazine at its native pixel
+    // dimensions, then restore the original zoom after capture. ──────────────────
+    const prevZoom = wrapper?.style.zoom ?? "";
+    if (wrapper) wrapper.style.zoom = "1";
+
+    // Give the browser one paint cycle to apply the zoom reset
+    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
     try {
-      // Dynamic import to keep SSR clean
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(mag, {
-        scale: 1.5,
+        scale: 1.5,          // 1.5× for crisp text in the AI response
         useCORS: true,
         logging: false,
         allowTaint: true,
+        backgroundColor: "#FEFDED",  // cream fallback so canvas isn't transparent
       });
 
-      // Crop canvas to the selection
-      const cx = Math.round(fx * canvas.width);
-      const cy = Math.round(fy * canvas.height);
-      const cw = Math.round(fw * canvas.width);
-      const ch = Math.round(fh * canvas.height);
+      // Restore wrapper zoom immediately after capture
+      if (wrapper) wrapper.style.zoom = prevZoom;
+
+      // Crop to the selected fraction
+      const cx = Math.max(0, Math.round(fx * canvas.width));
+      const cy = Math.max(0, Math.round(fy * canvas.height));
+      const cw = Math.max(1, Math.round(fw * canvas.width));
+      const ch = Math.max(1, Math.round(fh * canvas.height));
 
       const cropped = document.createElement("canvas");
-      cropped.width  = cw;
-      cropped.height = ch;
+      cropped.width = cw; cropped.height = ch;
       const ctx = cropped.getContext("2d");
       if (!ctx) { onCancel(); return; }
       ctx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
 
       onCapture(cropped.toDataURL("image/png"));
     } catch {
-      onCancel();
+      if (wrapper) wrapper.style.zoom = prevZoom;
+      setCapturing(false);
+      setCaptureError(true);
+      // Auto-dismiss error and close after 3 s
+      setTimeout(onCancel, 3000);
     }
   }
 
@@ -255,6 +271,7 @@ function RegionSelector({
         userSelect: "none",
       }}
       onMouseDown={(e) => {
+        setCaptureError(false);
         setDragging(true);
         setStart({ x: e.clientX, y: e.clientY });
         setCurrent({ x: e.clientX, y: e.clientY });
@@ -262,38 +279,32 @@ function RegionSelector({
       onMouseMove={(e) => { if (dragging) setCurrent({ x: e.clientX, y: e.clientY }); }}
       onMouseUp={handleMouseUp}
     >
-      {/* Dark overlay around selection */}
+      {/* Dark overlay */}
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", pointerEvents: "none" }} />
 
-      {/* Instruction banner */}
-      {!capturing && (
-        <div style={{
-          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
-          background: "#1A1A1A", color: "white", padding: "10px 20px",
-          fontSize: 13, fontWeight: 700, fontFamily: "sans-serif",
-          border: "2px solid #F15B2B", letterSpacing: "0.02em", zIndex: 10001,
-          pointerEvents: "none", whiteSpace: "nowrap",
-        }}>
-          🎯 Teken een selectie op het magazine · Esc = annuleren
-        </div>
-      )}
-      {capturing && (
-        <div style={{
-          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
-          background: "#F15B2B", color: "white", padding: "10px 20px",
-          fontSize: 13, fontWeight: 700, fontFamily: "sans-serif", zIndex: 10001,
-          pointerEvents: "none",
-        }}>
-          Screenshot maken...
-        </div>
-      )}
+      {/* Status banner */}
+      <div style={{
+        position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+        padding: "10px 20px", fontSize: 13, fontWeight: 700, fontFamily: "sans-serif",
+        zIndex: 10001, pointerEvents: "none", whiteSpace: "nowrap",
+        ...(captureError
+          ? { background: "#ef4444", color: "white" }
+          : capturing
+            ? { background: "#F15B2B", color: "white" }
+            : { background: "#1A1A1A", color: "white", border: "2px solid #F15B2B" }),
+      }}>
+        {captureError
+          ? "❌ Screenshot mislukt — probeer opnieuw of verklein de selectie"
+          : capturing
+            ? "⏳ Screenshot maken..."
+            : "🎯 Teken een selectie op het magazine · Esc = annuleren"}
+      </div>
 
-      {/* Selection rect */}
+      {/* Selection rectangle */}
       {selRect.w > 4 && selRect.h > 4 && (
         <div style={{
           position: "fixed",
-          left: selRect.x, top: selRect.y,
-          width: selRect.w, height: selRect.h,
+          left: selRect.x, top: selRect.y, width: selRect.w, height: selRect.h,
           border: "2px solid #F15B2B",
           background: "rgba(241,91,43,0.08)",
           boxShadow: "0 0 0 1px rgba(241,91,43,0.4)",
@@ -315,6 +326,7 @@ export default function Home() {
   const [zoom, setZoom] = useState(90);
   const [regionSelectMode, setRegionSelectMode] = useState(false);
   const [chatPendingImage, setChatPendingImage] = useState<{ dataUrl: string; mimeType: string } | null>(null);
+  const [chatInputHint, setChatInputHint] = useState<string | null>(null);
 
   useEffect(() => {
     setEditions(loadEditions());
@@ -525,6 +537,7 @@ export default function Home() {
           onEdit={(patch) => setContent((prev) => applyAiPatch(prev, patch))}
           onUndo={(snapshot) => setContent((prev) => applyAiPatch(prev, snapshot))}
           externalPendingImage={chatPendingImage}
+          externalInputHint={chatInputHint}
         />
       )}
 
@@ -551,10 +564,11 @@ export default function Home() {
         <RegionSelector
           onCapture={(dataUrl) => {
             setChatPendingImage({ dataUrl, mimeType: "image/png" });
+            setChatInputHint("Analyseer dit geselecteerde deel van het magazine:");
             setRegionSelectMode(false);
             setChatOpen(true);
             // Reset after a tick so MinimaxChat's useEffect picks it up once
-            setTimeout(() => setChatPendingImage(null), 100);
+            setTimeout(() => { setChatPendingImage(null); setChatInputHint(null); }, 200);
           }}
           onCancel={() => setRegionSelectMode(false)}
         />

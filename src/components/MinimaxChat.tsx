@@ -62,6 +62,7 @@ interface MinimaxChatProps {
   onEdit?: (patch: Partial<MagazineContent>) => void;
   onUndo?: (snapshot: Partial<MagazineContent>) => void;
   externalPendingImage?: { dataUrl: string; mimeType: string } | null;
+  externalInputHint?: string | null;
 }
 
 // ── Magazine context builder ──────────────────────────────────────────────────
@@ -216,7 +217,7 @@ const SUGGESTIONS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, externalPendingImage }: MinimaxChatProps) {
+export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, externalPendingImage, externalInputHint }: MinimaxChatProps) {
   // Profile state
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [activeUserName, setActiveUserNameState] = useState<string | null>(null);
@@ -243,6 +244,13 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
       setPendingImage(externalPendingImage);
     }
   }, [externalPendingImage]);
+
+  // Pre-fill input when the parent supplies a hint (e.g. after region select)
+  useEffect(() => {
+    if (externalInputHint) {
+      setInput(externalInputHint);
+    }
+  }, [externalInputHint]);
 
   // Build initial greeting based on whether we know the user
   const buildInitialMessage = (profile: UserProfile | null): string => {

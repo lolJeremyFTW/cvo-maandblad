@@ -9,26 +9,21 @@ interface PasswordGateProps {
   children: React.ReactNode;
 }
 
-export default function PasswordGate({ children }: PasswordGateProps) {
-  const [authed, setAuthed] = useState<boolean | null>(null); // null = loading
+// The login screen — rendered on server AND shown to unauthenticated users
+function LoginScreen({
+  onAuth,
+}: {
+  onAuth: () => void;
+}) {
   const [attempt, setAttempt] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_KEY);
-      setAuthed(stored === "ok");
-    } catch {
-      setAuthed(false);
-    }
-  }, []);
-
   function submit() {
     if (attempt === CORRECT_PASSWORD) {
-      localStorage.setItem(AUTH_KEY, "ok");
-      setAuthed(true);
+      try { localStorage.setItem(AUTH_KEY, "ok"); } catch { /* ignore */ }
+      onAuth();
     } else {
       setError(true);
       setShake(true);
@@ -38,13 +33,6 @@ export default function PasswordGate({ children }: PasswordGateProps) {
     }
   }
 
-  // Still loading auth state — render nothing to avoid flash
-  if (authed === null) return null;
-
-  // Authenticated — show the app
-  if (authed) return <>{children}</>;
-
-  // Password gate screen
   return (
     <div style={{
       position: "fixed", inset: 0,
@@ -158,4 +146,23 @@ export default function PasswordGate({ children }: PasswordGateProps) {
       </div>
     </div>
   );
+}
+
+export default function PasswordGate({ children }: PasswordGateProps) {
+  // Start as NOT authed — both server and client render the login screen initially.
+  // This avoids any hydration mismatch (server renders login, client also renders login).
+  // After mount, we check localStorage and immediately switch to app if already authed.
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    // Runs only on the client, after hydration is complete
+    try {
+      if (localStorage.getItem(AUTH_KEY) === "ok") {
+        setAuthed(true);
+      }
+    } catch { /* localStorage not available */ }
+  }, []);
+
+  if (authed) return <>{children}</>;
+  return <LoginScreen onAuth={() => setAuthed(true)} />;
 }

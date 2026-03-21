@@ -197,10 +197,10 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo }
   return (
     <div
       style={{
-        position: "fixed", top: 0, right: 0, width: 390, height: "100vh",
+        width: 390, minWidth: 390, height: "100vh",
         background: "#18181b", borderLeft: "2px solid #f97316",
-        display: "flex", flexDirection: "column", zIndex: 9999,
-        fontFamily: "sans-serif",
+        display: "flex", flexDirection: "column",
+        fontFamily: "sans-serif", flexShrink: 0,
       }}
     >
       {/* Header */}

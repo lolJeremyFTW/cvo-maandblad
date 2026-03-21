@@ -1,65 +1,241 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import MagazinePreview, { defaultContent, MagazineContent } from "@/components/MagazinePreview";
+import EditorPanel from "@/components/EditorPanel";
+import MinimaxChat from "@/components/MinimaxChat";
+import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle } from "lucide-react";
+
+const STORAGE_KEY = "cvo_magazine_editions";
+
+interface SavedEdition {
+  id: string;
+  name: string;
+  savedAt: string;
+  content: MagazineContent;
+}
+
+function loadEditions(): SavedEdition[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveEditions(editions: SavedEdition[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(editions));
+}
 
 export default function Home() {
+  const [content, setContent] = useState<MagazineContent>(defaultContent);
+  const [editions, setEditions] = useState<SavedEdition[]>([]);
+  const [showManager, setShowManager] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    setEditions(loadEditions());
+    // Herstel laatste sessie als aanwezig
+    const last = localStorage.getItem("cvo_magazine_current");
+    if (last) {
+      try { setContent(JSON.parse(last)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Auto-save huidige sessie bij wijziging
+  useEffect(() => {
+    localStorage.setItem("cvo_magazine_current", JSON.stringify(content));
+  }, [content]);
+
+  const handleSave = () => {
+    const name = saveName.trim() || `Editie ${content.edition} — ${content.month} ${content.year}`;
+    const newEdition: SavedEdition = {
+      id: Date.now().toString(),
+      name,
+      savedAt: new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" }),
+      content,
+    };
+    const updated = [newEdition, ...editions];
+    setEditions(updated);
+    saveEditions(updated);
+    setSaveName("");
+    setShowSaveInput(false);
+  };
+
+  const handleLoad = (edition: SavedEdition) => {
+    setContent(edition.content);
+    setShowManager(false);
+  };
+
+  const handleDelete = (id: string) => {
+    const updated = editions.filter((e) => e.id !== id);
+    setEditions(updated);
+    saveEditions(updated);
+  };
+
+  const handleNew = () => {
+    setContent({ ...defaultContent, edition: String(editions.length + 2).padStart(2, "0") });
+    setShowManager(false);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="flex h-screen bg-gray-200 overflow-hidden">
+      <EditorPanel content={content} onChange={setContent} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
+
+      {/* Preview area */}
+      <div className="flex-1 h-screen overflow-y-auto p-10 print:p-0 print:overflow-visible print:h-auto bg-gray-200 print:bg-white">
+
+        {/* Toolbar */}
+        <div className="print:hidden max-w-[820px] mx-auto mb-6 flex justify-between items-center bg-cvo-cream p-3 border-[3px] border-cvo-black" style={{ boxShadow: "4px 4px 0 #1a1a1a" }}>
+          <div className="flex items-center gap-3">
+            <div className="bg-cvo-black text-cvo-cream px-3 py-1 font-archivo-black text-[14px] uppercase tracking-tight">
+              Preview
+            </div>
+            <p className="text-[9px] font-bold uppercase text-gray-400 font-archivo tracking-widest">
+              Editie {content.edition} — {content.month} {content.year}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {/* Reset naar standaard */}
+            <button
+              onClick={() => {
+                if (confirm("Sessie resetten naar standaard? Opgeslagen edities blijven bewaard.")) {
+                  localStorage.removeItem("cvo_magazine_current");
+                  setContent({ ...defaultContent });
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 border-[2px] border-gray-300 text-gray-400 font-archivo-black text-[11px] uppercase tracking-tight hover:bg-gray-100 transition-colors"
+              title="Huidige sessie resetten naar standaard instellingen"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              ↺ Reset
+            </button>
+            {/* Edities beheren */}
+            <button
+              onClick={() => setShowManager(true)}
+              className="flex items-center gap-1.5 px-3 py-2 border-[2px] border-cvo-black font-archivo-black text-[11px] uppercase tracking-tight hover:bg-gray-100 transition-colors"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <FolderOpen size={14} /> Edities
+            </button>
+            {/* Opslaan */}
+            {showSaveInput ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                  placeholder={`Editie ${content.edition} — ${content.month}`}
+                  className="border-[2px] border-cvo-black px-2 py-1 text-[11px] font-archivo w-44 outline-none"
+                />
+                <button onClick={handleSave} className="bg-cvo-black text-cvo-cream px-3 py-2 font-archivo-black text-[11px] uppercase tracking-tight hover:bg-cvo-orange transition-colors">
+                  OK
+                </button>
+                <button onClick={() => setShowSaveInput(false)} className="p-2 border-[2px] border-gray-200 hover:bg-gray-100">
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowSaveInput(true)}
+                className="flex items-center gap-1.5 bg-cvo-orange text-cvo-cream px-3 py-2 font-archivo-black text-[11px] uppercase tracking-tight hover:bg-cvo-black transition-colors border-[2px] border-cvo-black"
+              >
+                <Save size={14} /> Opslaan
+              </button>
+            )}
+            {/* Print */}
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 bg-cvo-black text-cvo-cream px-3 py-2 font-archivo-black text-[11px] uppercase tracking-tight hover:bg-cvo-orange transition-colors border-[2px] border-cvo-black"
+            >
+              <Printer size={14} /> Print PDF
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Magazine */}
+        <div className="max-w-[820px] mx-auto print:max-w-none print:mx-0">
+          <MagazinePreview content={content} onEdit={(patch) => setContent(prev => ({ ...prev, ...patch }))} selectedBlockId={selectedBlockId} onSelectBlock={setSelectedBlockId} />
         </div>
-      </main>
-    </div>
+        <div className="h-16 print:hidden" />
+      </div>
+
+      {/* ── Minimax AI Chat ── */}
+      <MinimaxChat isOpen={chatOpen} onClose={() => setChatOpen(false)} content={content} />
+
+      {/* ── Chat toggle button ── */}
+      <button
+        onClick={() => setChatOpen(p => !p)}
+        style={{
+          position: "fixed", bottom: 24, right: chatOpen ? 404 : 24,
+          width: 52, height: 52, borderRadius: "50%",
+          background: "var(--color-cvo-orange, #f97316)",
+          border: "none", cursor: "pointer", color: "white",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 20px rgba(249,115,22,0.4)",
+          zIndex: 10000, transition: "right 0.3s ease"
+        }}
+      >
+        <MessageCircle size={22} />
+      </button>
+
+      {/* ── Edities Manager Modal ── */}
+      {showManager && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+          <div className="bg-cvo-cream border-[3px] border-cvo-black w-full max-w-[500px] max-h-[80vh] flex flex-col" style={{ boxShadow: "6px 6px 0 #1a1a1a" }}>
+            {/* Header */}
+            <div className="bg-cvo-black text-cvo-cream px-5 py-3 flex justify-between items-center shrink-0">
+              <span className="font-archivo-black text-[16px] uppercase tracking-tight">Mijn Edities</span>
+              <button onClick={() => setShowManager(false)} className="p-1 hover:text-cvo-orange transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* New editie button */}
+            <div className="px-5 py-3 border-b-[2px] border-cvo-black shrink-0">
+              <button
+                onClick={handleNew}
+                className="w-full flex items-center justify-center gap-2 bg-cvo-orange text-cvo-cream py-2 font-archivo-black text-[12px] uppercase tracking-tight hover:bg-cvo-black transition-colors border-[2px] border-cvo-black"
+              >
+                <Plus size={14} /> Nieuwe lege editie starten
+              </button>
+            </div>
+
+            {/* Saved editions list */}
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+              {editions.length === 0 ? (
+                <p className="text-[11px] text-gray-400 font-archivo text-center py-6">
+                  Nog geen opgeslagen edities.<br />Klik op &quot;Opslaan&quot; om de huidige editie op te slaan.
+                </p>
+              ) : (
+                editions.map((ed) => (
+                  <div key={ed.id} className="flex items-center gap-3 border-[2px] border-gray-200 p-3 hover:border-cvo-black transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-archivo-black text-[13px] text-cvo-black truncate">{ed.name}</p>
+                      <p className="text-[9px] text-gray-400 font-archivo uppercase tracking-wider">{ed.savedAt} · Template: {ed.content.template}</p>
+                    </div>
+                    <button
+                      onClick={() => handleLoad(ed)}
+                      className="shrink-0 bg-cvo-black text-cvo-cream px-3 py-1.5 font-archivo-black text-[10px] uppercase tracking-tight hover:bg-cvo-orange transition-colors"
+                    >
+                      Laden
+                    </button>
+                    <button
+                      onClick={() => handleDelete(ed.id)}
+                      className="shrink-0 p-1.5 text-red-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

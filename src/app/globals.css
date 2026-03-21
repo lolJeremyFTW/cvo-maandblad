@@ -1,26 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Archivo+Black&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cvo-orange: #F15B2B;
+  --cvo-mint: #ACDCCE;
+  --cvo-cream: #FEFDED;
+  --cvo-black: #1a1a1a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-cvo-orange: var(--cvo-orange);
+  --color-cvo-mint: var(--cvo-mint);
+  --color-cvo-cream: var(--cvo-cream);
+  --color-cvo-black: var(--cvo-black);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-archivo-black: "Archivo Black", sans-serif;
+  --font-archivo: "Archivo", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #e5e7eb;
+  color: var(--cvo-black);
+  font-family: "Archivo", sans-serif;
+}
+
+@layer components {
+  .cvo-border {
+    @apply border-[3px] border-cvo-black;
+  }
+  .cvo-shadow {
+    @apply shadow-[5px_5px_0_var(--cvo-black)];
+  }
+  .section-label {
+    @apply text-[8px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-1 block font-archivo;
+  }
+}
+
+/* ── Print styles ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  /* Verberg ALLES via visibility — achtergrondkleuren blijven intact */
+  * {
+    visibility: hidden !important;
+  }
+
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Alleen het magazine en zijn kinderen zichtbaar */
+  #magazine,
+  #magazine * {
+    visibility: visible !important;
+  }
+
+  /* Zet magazine exact op de A4 pagina */
+  #magazine {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
 }

@@ -81,6 +81,41 @@ interface SavedEdition {
   content: MagazineContent;
 }
 
+/** Strip base64 image data from content before saving to localStorage.
+ *  Keeps http(s) URLs intact, replaces data: URIs with a placeholder.
+ *  This keeps localStorage well under the 5MB quota. */
+function slimForStorage(content: MagazineContent): MagazineContent {
+  const stripImg = (s?: string) =>
+    s && s.startsWith("data:") ? "[base64-image]" : s;
+
+  return {
+    ...content,
+    // Strip images from crew members
+    crew: content.crew.map((c) => ({
+      ...c,
+      photo: stripImg((c as Record<string, unknown>).photo as string | undefined),
+    })) as MagazineContent["crew"],
+    // Strip images from custom block rows
+    customRows: content.customRows.map((row) => ({
+      ...row,
+      cards: row.cards.map((card) => ({
+        ...card,
+        image: stripImg(card.image),
+      })),
+    })),
+  };
+}
+
+function safeSetItem(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    // QuotaExceededError or similar — silently ignore, don't crash
+    return false;
+  }
+}
+
 function loadEditions(): SavedEdition[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -91,7 +126,7 @@ function loadEditions(): SavedEdition[] {
 }
 
 function saveEditions(editions: SavedEdition[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(editions));
+  safeSetItem(STORAGE_KEY, JSON.stringify(editions));
 }
 
 export default function Home() {
@@ -113,7 +148,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("cvo_magazine_current", JSON.stringify(content));
+    // Strip base64 images before storing — prevents QuotaExceededError
+    safeSetItem("cvo_magazine_current", JSON.stringify(slimForStorage(content)));
   }, [content]);
 
   const handleSave = () => {

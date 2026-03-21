@@ -1,10 +1,75 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import MagazinePreview, { defaultContent, MagazineContent } from "@/components/MagazinePreview";
+import MagazinePreview, { defaultContent, MagazineContent, CustomBlock, CustomRow } from "@/components/MagazinePreview";
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
 import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut } from "lucide-react";
+
+// ── Defaults for any missing CustomBlock fields ──────────────────────────────
+const BLOCK_DEFAULTS: Omit<CustomBlock, "id" | "headline" | "body"> = {
+  cols: 12,
+  heightPx: 200,
+  style: "black",
+  contentType: "text",
+  headlineSize: 28,
+  bodySize: 13,
+  textAlign: "left",
+  uppercase: true,
+  italic: false,
+  padding: "md",
+  borderTop: false,
+  imagePosition: "left",
+  imageSize: 100,
+  imageFit: "cover",
+  imageOpacity: 100,
+};
+
+function sanitizeBlock(raw: Partial<CustomBlock>, rowHeight: number): CustomBlock {
+  return {
+    ...BLOCK_DEFAULTS,
+    headline: "",
+    body: "",
+    ...raw,
+    id: raw.id ?? `block-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    heightPx: raw.heightPx ?? rowHeight,
+  };
+}
+
+function sanitizeCustomRows(rows: unknown[]): CustomRow[] {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((r): r is Record<string, unknown> => r !== null && typeof r === "object")
+    .map((row, i) => {
+      const rowHeight = typeof row.heightPx === "number" ? row.heightPx : 200;
+      const cards = Array.isArray(row.cards)
+        ? row.cards.map((c) => sanitizeBlock(c as Partial<CustomBlock>, rowHeight))
+        : [];
+      return {
+        id: typeof row.id === "string" ? row.id : `row-${i}`,
+        heightPx: rowHeight,
+        cards,
+      };
+    })
+    .filter((row) => row.cards.length > 0);
+}
+
+/** Apply an AI patch safely — sanitize customRows and auto-set template */
+function applyAiPatch(
+  prev: MagazineContent,
+  patch: Partial<MagazineContent>
+): MagazineContent {
+  const next = { ...prev, ...patch };
+
+  // Sanitize customRows if present
+  if (patch.customRows !== undefined) {
+    next.customRows = sanitizeCustomRows(patch.customRows as unknown[]);
+    // Auto-switch to Custom template when AI sends customRows
+    if (!patch.template) next.template = "Custom";
+  }
+
+  return next;
+}
 
 const STORAGE_KEY = "cvo_magazine_editions";
 
@@ -233,8 +298,8 @@ export default function Home() {
           isOpen={chatOpen}
           onClose={() => setChatOpen(false)}
           content={content}
-          onEdit={(patch) => setContent((prev) => ({ ...prev, ...patch }))}
-          onUndo={(snapshot) => setContent((prev) => ({ ...prev, ...snapshot }))}
+          onEdit={(patch) => setContent((prev) => applyAiPatch(prev, patch))}
+          onUndo={(snapshot) => setContent((prev) => applyAiPatch(prev, snapshot))}
         />
       )}
 

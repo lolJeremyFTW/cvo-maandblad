@@ -360,7 +360,12 @@ Ik heb een quote blok toegevoegd onderaan je huidige lay-out.
 }
 </edit>
 
-KRITIEKE REGEL voor customRows uitbreiden: De context hierboven bevat de volledige huidige customRows JSON. Kopieer die rijen VOLLEDIG over en voeg nieuwe toe. Laat nooit bestaande rijen weg tenzij de redacteur dat expliciet vraagt.`;
+KRITIEKE REGELS voor customRows — ALTIJD NALEVEN:
+1. Kopieer ALTIJD alle bestaande rijen VOLLEDIG over vanuit de huidige magazine context, en voeg nieuwe toe. Laat NOOIT bestaande rijen weg tenzij expliciet gevraagd.
+2. Stuur ALTIJD "template": "Custom" mee wanneer je customRows verstuurt, anders worden de rijen NIET getoond.
+3. cols werkt PROPORTIONEEL binnen een rij: cols=8 naast cols=4 = 2/3 + 1/3 breedte. Eén kaart met cols=12 is volledig breed.
+4. heightPx van elke card MOET gelijk zijn aan de heightPx van de rij.
+5. Elke card heeft VERPLICHT: id, cols, heightPx, style, contentType, headline, headlineSize, body, bodySize, textAlign, uppercase, italic, padding, borderTop, imagePosition.`;
 
   const systemPrompt = magazineContext
     ? `${baseSystemPrompt}\n\n${magazineContext}`

@@ -898,6 +898,33 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
         {/* ── OVER ONS ── */}
         <EditorSection icon={<Building2 size={15} />} title="Logo & Bedrijfstekst">
 
+          {/* Custom logo upload */}
+          <div>
+            <Label>Logo afbeelding</Label>
+            <div className="flex items-center gap-2">
+              <ImgUpload
+                src={watch("customLogo") as string}
+                label="logo"
+                onUpload={(v) => setValue("customLogo", v, { shouldDirty: true })}
+                className="h-12 w-24 shrink-0"
+              />
+              <div className="flex flex-col gap-1 flex-1">
+                <span className="text-[9px] text-gray-400 font-archivo">
+                  {watch("customLogo") ? "Custom logo actief" : "CLUBvanONS logo (standaard)"}
+                </span>
+                {watch("customLogo") && (
+                  <button
+                    type="button"
+                    onClick={() => setValue("customLogo", "", { shouldDirty: true })}
+                    className="text-[9px] text-red-400 hover:text-red-600 font-archivo font-bold uppercase tracking-wide self-start"
+                  >
+                    ✕ Reset naar standaard
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Logo grootte + padding — zij aan zij */}
           <div className="grid grid-cols-2 gap-3">
             <div>

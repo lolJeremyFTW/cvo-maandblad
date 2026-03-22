@@ -90,6 +90,7 @@ export interface MagazineContent {
   customRows: CustomRow[];
   customPadding: number;   // px padding around the custom template canvas (0–40)
   customGap: number;       // px gap between blocks (0–16)
+  customLogo: string;      // data URL or HTTPS URL for custom company logo (empty = use default CVO logo)
 }
 
 export const defaultContent: MagazineContent = {
@@ -138,6 +139,7 @@ export const defaultContent: MagazineContent = {
   customRows: [],
   customPadding: 0,
   customGap: 0,
+  customLogo: "",
 };
 
 function CvoLogo({ className }: { className?: string }) {
@@ -306,11 +308,15 @@ function CrewAvatar({ src, onUpload, bg = "bg-gray-100", border = "border-cvo-bl
 function LogoArea({ content }: { content: MagazineContent }) {
   const size = Math.max(30, content.logoSize ?? 90);
   const pad = content.logoPadding ?? 8;
-  // Use margin so negative values work (padding can't go below 0)
+  const hasCustomLogo = !!content.customLogo;
   return (
     <div className="flex justify-center items-center" style={{ marginTop: pad, marginBottom: pad }}>
       <div style={{ height: size }}>
-        <CvoLogo className="h-full w-auto" />
+        {hasCustomLogo ? (
+          <img src={content.customLogo} alt="Logo" style={{ height: "100%", width: "auto", objectFit: "contain" }} />
+        ) : (
+          <CvoLogo className="h-full w-auto" />
+        )}
       </div>
     </div>
   );

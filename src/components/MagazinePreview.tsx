@@ -22,7 +22,7 @@ export interface CustomBlock {
   customText?: string;         // hex override
 
   // Content
-  contentType: "poster" | "text" | "image" | "split" | "quote" | "divider" | "events" | "pakdemic" | "crew" | "buurtpost" | "terugblik" | "joinus" | "stat" | "highlight" | "ticket" | "social" | "colofon";
+  contentType: "poster" | "text" | "image" | "split" | "quote" | "divider" | "events" | "pakdemic" | "crew" | "buurtpost" | "terugblik" | "joinus" | "stat" | "highlight" | "ticket" | "social" | "colofon" | "collage";
   headline: string;
   headlineSize: number;        // 12–72 (px)
   body: string;
@@ -1243,6 +1243,68 @@ function CustomBlockView({
               <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: textColor, opacity: 0.3, fontFamily: "var(--font-archivo-black)" }}>
                 CLUBvanONS Maandblad
               </span>
+            </div>
+          </div>
+        );
+      }
+
+      case "collage": {
+        // Overlapping rotated card zone — exact replica of the Collage template top section
+        const crew = content?.crew ?? [];
+        const imgs = content?.flashbackImages ?? [];
+        return (
+          <div style={{ width: "100%", height: "100%", background: "#1a1a1a", position: "relative", overflow: "hidden" }}>
+            {/* Card 1: Crew — top left, rotated orange */}
+            <div style={{
+              position: "absolute", top: 16, left: 16, width: 210,
+              background: "var(--cvo-orange,#F15B2B)", border: "3px solid #1a1a1a",
+              padding: 12, zIndex: 20, transform: "rotate(-2.5deg)",
+              boxShadow: "6px 6px 0 rgba(255,255,255,0.15)",
+            }}>
+              <span style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: 3, fontFamily: "var(--font-archivo)" }}>Wie zijn wij</span>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: 20, lineHeight: 0.9, textTransform: "uppercase", marginBottom: 7 }}>Meet The Crew</div>
+              <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
+                {crew.slice(0, 5).map((m, i) => (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", border: "2px solid #1a1a1a", background: "#FED7AA", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, flexShrink: 0 }}>
+                      {m.avatar ? <img src={m.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : (m.name?.slice(0, 2).toUpperCase() ?? "?")}
+                    </div>
+                    <span style={{ fontSize: 5, fontWeight: 700, textTransform: "uppercase", textAlign: "center", lineHeight: 1.2, wordBreak: "break-all" }}>{m.name}</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 7.5, lineHeight: 1.5, margin: 0, fontFamily: "var(--font-archivo)" }}>{content?.crewTeaser ?? "Wij zijn CLUBvanONS."}</p>
+            </div>
+
+            {/* Card 2: Terugblik — top right, cream */}
+            <div style={{
+              position: "absolute", top: 24, right: 16, width: 250,
+              background: "var(--cvo-cream,#FEFDED)", border: "3px solid #1a1a1a",
+              padding: 12, zIndex: 10, transform: "rotate(2deg)",
+              boxShadow: "6px 6px 0 #1a1a1a",
+            }}>
+              <span style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: 3, color: "#9ca3af", fontFamily: "var(--font-archivo)" }}>Terugblik</span>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: 17, lineHeight: 0.9, textTransform: "uppercase", marginBottom: 7, color: "#1a1a1a" }}>{content?.flashbackHeadline ?? "Wat er is geweest"}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 3, marginBottom: 6 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ aspectRatio: "4/3", background: "#e5e7eb", border: "1px solid #d1d5db", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {imgs[i] ? <img src={imgs[i]} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span style={{ fontSize: 6, color: "#9ca3af" }}>FOTO {i + 1}</span>}
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 7.5, lineHeight: 1.5, margin: 0, color: "#374151", fontFamily: "var(--font-archivo)" }}>{content?.flashbackBody ?? ""}</p>
+            </div>
+
+            {/* Card 3: Feature — bottom center, black with orange border */}
+            <div style={{
+              position: "absolute", bottom: 12, left: "20%", width: 270,
+              background: "#1a1a1a", border: "3px solid var(--cvo-orange,#F15B2B)",
+              padding: 12, zIndex: 30, color: "var(--cvo-cream,#FEFDED)",
+              transform: "rotate(-1deg)", boxShadow: "6px 6px 0 var(--cvo-orange,#F15B2B)",
+            }}>
+              <span style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em", display: "block", marginBottom: 3, color: "var(--cvo-orange,#F15B2B)", fontFamily: "var(--font-archivo)" }}>Op straat</span>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: 26, lineHeight: 0.9, textTransform: "uppercase", marginBottom: 7 }}>{content?.mainFeatureHeadline || block.headline || "Feature"}</div>
+              <p style={{ fontSize: 8, lineHeight: 1.5, margin: 0, color: "#9ca3af", fontFamily: "var(--font-archivo)" }}>{content?.mainFeatureBody ?? block.body ?? ""}</p>
             </div>
           </div>
         );

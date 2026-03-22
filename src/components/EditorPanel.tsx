@@ -1100,7 +1100,7 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
         const typeLabel: Record<string, string> = {
           poster: "Poster", text: "Tekst", image: "Foto", split: "Split", quote: "Quote", divider: "Divider",
           events: "Agenda", pakdemic: "Pak de Mic", crew: "Crew", buurtpost: "Buurtpost", terugblik: "Terugblik", joinus: "Join Ons",
-          stat: "Statistiek", highlight: "Highlight", ticket: "Ticket", social: "Social", colofon: "Colofon",
+          stat: "Statistiek", highlight: "Highlight", ticket: "Ticket", social: "Social", colofon: "Colofon", collage: "Collage Zone",
         };
         const styleLabel: Record<string, string> = {
           black: "Zwart", orange: "Accent", mint: "Mint", cream: "Licht", transparent: "Doorz.",
@@ -1188,6 +1188,62 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
           patchRows(newRows);
         };
 
+        const uid = () => Date.now().toString() + Math.random().toString(36).slice(2, 7);
+        const blankCard = (contentType: CustomBlock["contentType"], style: CustomBlock["style"] = "black"): CustomBlock => ({
+          id: uid(), cols: 6, heightPx: 200, style, contentType,
+          headline: "", body: "", tag: "", image: "", headlineSize: 28, bodySize: 10,
+          imagePosition: "left", imageSize: 100, imageFit: "cover", imageOpacity: 100,
+          textAlign: "left", uppercase: true, italic: false, padding: "md", borderTop: false,
+        });
+
+        const PRESETS: Record<string, CustomRow[]> = {
+          Collage: [
+            { id: uid(), heightPx: 360, cards: [{ ...blankCard("collage", "black"), cols: 12, heightPx: 360 }] },
+            { id: uid(), heightPx: 240, cards: [
+              { ...blankCard("buurtpost", "black"), cols: 4, heightPx: 240 },
+              { ...blankCard("joinus", "black"), cols: 4, heightPx: 240 },
+              { ...blankCard("pakdemic", "black"), cols: 4, heightPx: 240 },
+            ]},
+          ],
+          Standard: [
+            { id: uid(), heightPx: 280, cards: [
+              { ...blankCard("crew", "cream"), cols: 5, heightPx: 280 },
+              { ...blankCard("terugblik", "cream"), cols: 7, heightPx: 280 },
+            ]},
+            { id: uid(), heightPx: 200, cards: [{ ...blankCard("text", "black"), cols: 12, heightPx: 200, headline: "WE WAREN ERBIJ", headlineSize: 32 }] },
+            { id: uid(), heightPx: 240, cards: [
+              { ...blankCard("buurtpost", "cream"), cols: 4, heightPx: 240 },
+              { ...blankCard("joinus", "black"), cols: 4, heightPx: 240 },
+              { ...blankCard("pakdemic", "cream"), cols: 4, heightPx: 240 },
+            ]},
+          ],
+          Brutalist: [
+            { id: uid(), heightPx: 120, cards: [{ ...blankCard("poster", "black"), cols: 12, heightPx: 120, headline: "OP STRAAT", headlineSize: 52, uppercase: true }] },
+            { id: uid(), heightPx: 240, cards: [
+              { ...blankCard("crew", "orange"), cols: 4, heightPx: 240 },
+              { ...blankCard("text", "cream"), cols: 8, heightPx: 240 },
+            ]},
+            { id: uid(), heightPx: 200, cards: [
+              { ...blankCard("events", "black"), cols: 6, heightPx: 200 },
+              { ...blankCard("pakdemic", "cream"), cols: 6, heightPx: 200 },
+            ]},
+          ],
+          Minimaal: [
+            { id: uid(), heightPx: 320, cards: [{ ...blankCard("image", "cream"), cols: 12, heightPx: 320 }] },
+            { id: uid(), heightPx: 160, cards: [{ ...blankCard("quote", "cream"), cols: 12, heightPx: 160 }] },
+            { id: uid(), heightPx: 200, cards: [
+              { ...blankCard("text", "cream"), cols: 8, heightPx: 200 },
+              { ...blankCard("joinus", "black"), cols: 4, heightPx: 200 },
+            ]},
+          ],
+        };
+
+        const loadPreset = (name: string) => {
+          if (!PRESETS[name]) return;
+          if (rows.length > 0 && !confirm(`Huidige layout vervangen door "${name}" preset?`)) return;
+          patchRows(PRESETS[name]);
+        };
+
         const shuffleCard = (rowIdx: number, cardIdx: number) => {
           const styleOptions: CustomBlock["style"][] = ["black", "orange", "mint", "cream"];
           const newStyle = styleOptions[Math.floor(Math.random() * styleOptions.length)];
@@ -1213,6 +1269,23 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
               <Layers size={13} className="text-cvo-orange shrink-0" />
               <span className="font-archivo-black text-[12px] uppercase text-cvo-cream tracking-wide flex-1">Custom Builder</span>
               <span className="text-[9px] text-gray-500 font-archivo">{rows.length} rij{rows.length !== 1 ? "en" : ""}</span>
+            </div>
+
+            {/* Template presets */}
+            <div className="border-b-[2px] border-gray-100 px-3 py-2">
+              <div className="text-[9px] text-gray-400 font-archivo uppercase tracking-widest mb-1.5">Laad preset</div>
+              <div className="flex gap-1.5 flex-wrap">
+                {Object.keys(PRESETS).map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => loadPreset(name)}
+                    className="px-2.5 py-1 bg-cvo-black text-cvo-cream font-archivo-black text-[9px] uppercase tracking-wide hover:bg-cvo-orange transition-colors"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Add row buttons */}

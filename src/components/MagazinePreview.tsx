@@ -22,7 +22,7 @@ export interface CustomBlock {
   customText?: string;         // hex override
 
   // Content
-  contentType: "poster" | "text" | "image" | "split" | "quote" | "divider" | "events" | "pakdemic" | "crew" | "buurtpost" | "terugblik" | "joinus";
+  contentType: "poster" | "text" | "image" | "split" | "quote" | "divider" | "events" | "pakdemic" | "crew" | "buurtpost" | "terugblik" | "joinus" | "stat" | "highlight" | "ticket" | "social" | "colofon";
   headline: string;
   headlineSize: number;        // 12–72 (px)
   body: string;
@@ -996,6 +996,258 @@ function CustomBlockView({
           </div>
         );
       }
+      // ─────────────────────────────────────────────────────────
+      // NEW BLOCK TYPES
+      // ─────────────────────────────────────────────────────────
+
+      case "stat": {
+        // Large statistics / number hero card
+        return (
+          <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+            {/* Top accent bar */}
+            <div style={{ height: 5, background: "var(--color-cvo-orange,#F15B2B)", flexShrink: 0 }} />
+            {/* Ghost large number background */}
+            <div style={{
+              position: "absolute", bottom: -12, right: -8,
+              fontFamily: "var(--font-archivo-black)", fontWeight: 900, fontSize: 110,
+              color: textColor, opacity: 0.05, lineHeight: 1, userSelect: "none", pointerEvents: "none",
+            }}>{block.headline || "0"}</div>
+            <div style={{ flex: 1, padding: padVal, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 0 }}>
+              {block.tag && (
+                <span style={{ fontSize: 7, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.22em", color: textColor, opacity: 0.45, fontFamily: "var(--font-archivo-black)", marginBottom: 6 }}>
+                  {block.tag}
+                </span>
+              )}
+              {/* Main stat number */}
+              <div style={{
+                fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900,
+                color: "var(--color-cvo-orange,#F15B2B)", lineHeight: 0.88, letterSpacing: "-0.02em",
+              }}>
+                {block.headline || "150+"}
+              </div>
+              {/* Label */}
+              <div style={{
+                fontSize: `${bs}px`, color: textColor, lineHeight: 1.4,
+                fontFamily: "var(--font-archivo)", marginTop: 8, opacity: 0.75,
+              }}>
+                {block.body || "Actieve leden"}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case "highlight": {
+        // Editorial feature highlight — bold statement with attribution
+        return (
+          <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
+            {/* Giant decorative opening quote */}
+            <div style={{
+              position: "absolute", top: -28, left: 6,
+              fontSize: 200, fontFamily: "var(--font-archivo-black)", fontWeight: 900,
+              color: "var(--color-cvo-orange,#F15B2B)", opacity: 0.07, lineHeight: 1,
+              userSelect: "none", pointerEvents: "none",
+            }}>&ldquo;</div>
+            {/* Left orange accent stripe */}
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "var(--color-cvo-orange,#F15B2B)" }} />
+            <div style={{
+              position: "absolute", inset: 0, paddingTop: padVal, paddingBottom: padVal,
+              paddingLeft: `calc(${padVal} + 12px)`, paddingRight: padVal,
+              display: "flex", flexDirection: "column", justifyContent: "center", gap: 10,
+            }}>
+              {block.tag && (
+                <span style={{
+                  fontSize: 7, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.28em",
+                  color: "var(--color-cvo-orange,#F15B2B)", fontFamily: "var(--font-archivo-black)",
+                }}>{block.tag}</span>
+              )}
+              {/* Main statement */}
+              <div style={{
+                fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor,
+                lineHeight: 1.05, fontStyle: fontStyle,
+                textTransform: transform as React.CSSProperties["textTransform"],
+              }}>
+                {block.headline || "Samen bouwen we aan iets bijzonders."}
+              </div>
+              {block.body && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+                  <div style={{ width: 28, height: 2, background: "var(--color-cvo-orange,#F15B2B)" }} />
+                  <div style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.55, fontFamily: "var(--font-archivo)", letterSpacing: "0.04em" }}>
+                    — {block.body}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      case "ticket": {
+        // Event ticket with stub and barcode decoration
+        const ticketParts = (block.body || "15 MRT · CLUBvanONS · 22:00").split("·").map(p => p.trim());
+        const ticketLabels = ["DATUM", "LOCATIE", "AANVANG", "INFO"];
+        return (
+          <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex" }}>
+            {/* Main ticket body */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderRight: `2px dashed ${textColor}25` }}>
+              {/* Orange header strip */}
+              <div style={{ background: "var(--color-cvo-orange,#F15B2B)", padding: "4px 12px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.3em", color: "#fff", fontFamily: "var(--font-archivo-black)" }}>
+                  {block.tag || "NEXT EVENT"}
+                </span>
+                <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-archivo-black)" }}>
+                  ADMIT ONE
+                </span>
+              </div>
+              {/* Event name */}
+              <div style={{ flex: 1, padding: padVal, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 }}>
+                <div style={{
+                  fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor,
+                  textTransform: "uppercase", lineHeight: 1.0,
+                }}>
+                  {block.headline || "Clubnight #01"}
+                </div>
+                {/* Info grid */}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {ticketParts.map((part, i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <span style={{ fontSize: 6, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.18em", color: textColor, opacity: 0.38, fontFamily: "var(--font-archivo-black)" }}>
+                        {ticketLabels[i] ?? "INFO"}
+                      </span>
+                      <span style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>{part}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Barcode decoration */}
+              <div style={{ height: 24, padding: "0 12px 8px", display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+                {Array.from({ length: 30 }, (_, i) => (
+                  <div key={i} style={{ width: 1.5, background: textColor, opacity: 0.18, height: i % 4 === 0 ? 18 : i % 3 === 0 ? 12 : i % 2 === 0 ? 16 : 9 }} />
+                ))}
+              </div>
+            </div>
+            {/* Tear-off stub */}
+            <div style={{ width: 30, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "8px 0", gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: bg, border: `2px solid ${textColor}20` }} />
+              <div style={{
+                writingMode: "vertical-rl", textOrientation: "mixed",
+                fontFamily: "var(--font-archivo-black)", fontSize: 6.5, fontWeight: 900,
+                textTransform: "uppercase", letterSpacing: "0.2em",
+                color: textColor, opacity: 0.25, transform: "rotate(180deg)", flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>CLUBvanONS</div>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: bg, border: `2px solid ${textColor}20` }} />
+            </div>
+          </div>
+        );
+      }
+
+      case "social": {
+        // Instagram / social media card
+        return (
+          <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            {/* Photo area */}
+            <div style={{ flex: block.image ? "0 0 60%" : "0 0 38%", overflow: "hidden", position: "relative", background: `${textColor}12` }}>
+              {block.image ? (
+                <img src={block.image} alt="" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 20, opacity: 0.12, color: textColor }}>📸</span>
+                </div>
+              )}
+              {/* Username bar overlay */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0,
+                padding: "5px 8px",
+                background: "linear-gradient(to bottom,rgba(0,0,0,0.55),transparent)",
+                display: "flex", alignItems: "center", gap: 5,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: "var(--color-cvo-orange,#F15B2B)",
+                  border: "1.5px solid rgba(255,255,255,0.7)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 7, fontWeight: 900, color: "#fff", fontFamily: "var(--font-archivo-black)" }}>C</span>
+                </div>
+                <span style={{ fontSize: 8, fontWeight: 900, color: "#fff", fontFamily: "var(--font-archivo-black)" }}>
+                  @{block.headline || "clubvanons"}
+                </span>
+              </div>
+            </div>
+            {/* Caption area */}
+            <div style={{ flex: 1, padding: "6px 10px", display: "flex", flexDirection: "column", gap: 3, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, opacity: 0.55, color: textColor }}>♥</span>
+                <span style={{ fontSize: 7.5, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", opacity: 0.85 }}>
+                  @{block.headline || "clubvanons"}
+                </span>
+              </div>
+              <p style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.72, lineHeight: 1.45, margin: 0, fontFamily: "var(--font-archivo)", overflow: "hidden" }}>
+                {block.body || "Volg ons op social media voor de laatste updates! 🧡 #CLUBvanONS #Breda"}
+              </p>
+              {block.tag && (
+                <span style={{ fontSize: 7, color: "var(--color-cvo-orange,#F15B2B)", fontFamily: "var(--font-archivo)", fontWeight: 700 }}>
+                  #{block.tag.replace(/\s+/g, "").replace(/#/g, " #")}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      case "colofon": {
+        // Magazine credits / colofon block
+        const lines = (block.body || "Hoofdredacteur: Naam\nFotografie: Naam\nVormgeving: CLUBvanONS\nDruk: Editie 01 · Maart 2026").split("\n");
+        return (
+          <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", padding: padVal, gap: 6 }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexShrink: 0, borderBottom: `2px solid ${textColor}`, paddingBottom: 6 }}>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, color: textColor, textTransform: "uppercase", lineHeight: 1 }}>
+                {block.headline || "Colofon"}
+              </div>
+              {block.tag && (
+                <span style={{ fontSize: 7, color: textColor, opacity: 0.38, textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: "var(--font-archivo-black)" }}>
+                  {block.tag}
+                </span>
+              )}
+            </div>
+            {/* Credits list */}
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 4 }}>
+              {lines.map((line, i) => {
+                const colonIdx = line.indexOf(":");
+                const label = colonIdx > -1 ? line.slice(0, colonIdx).trim() : null;
+                const value = colonIdx > -1 ? line.slice(colonIdx + 1).trim() : line.trim();
+                return (
+                  <div key={i} style={{ display: "flex", gap: 6, alignItems: "baseline", minWidth: 0 }}>
+                    {label ? (
+                      <>
+                        <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: textColor, opacity: 0.38, fontFamily: "var(--font-archivo-black)", flexShrink: 0, minWidth: 70 }}>
+                          {label}
+                        </span>
+                        <div style={{ flex: 1, height: 1, background: `${textColor}15`, alignSelf: "center", minWidth: 4 }} />
+                        <span style={{ fontSize: 8, color: textColor, fontFamily: "var(--font-archivo)", opacity: 0.8, flexShrink: 0, textAlign: "right" }}>
+                          {value}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 7.5, color: textColor, opacity: 0.65, fontFamily: "var(--font-archivo)" }}>{value}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Bottom CVO mark */}
+            <div style={{ flexShrink: 0, paddingTop: 4, borderTop: `1px solid ${textColor}15`, display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 10, height: 10, background: "var(--color-cvo-orange,#F15B2B)" }} />
+              <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: textColor, opacity: 0.3, fontFamily: "var(--font-archivo-black)" }}>
+                CLUBvanONS Maandblad
+              </span>
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1020,7 +1272,7 @@ function CustomBlockView({
       onClick={onSelect}
     >
       {/* Universal background image — works for ALL content types */}
-      {block.image && block.contentType !== "image" && block.contentType !== "split" && block.contentType !== "poster" && block.contentType !== "buurtpost" && (
+      {block.image && block.contentType !== "image" && block.contentType !== "split" && block.contentType !== "poster" && block.contentType !== "buurtpost" && block.contentType !== "social" && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img
             src={block.image}

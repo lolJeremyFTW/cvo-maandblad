@@ -130,6 +130,11 @@ function BlockEditor({
     buurtpost: "Buurtpost",
     terugblik: "Terugblik",
     joinus: "Join Ons",
+    stat: "Statistiek",
+    highlight: "Highlight",
+    ticket: "Ticket",
+    social: "Social",
+    colofon: "Colofon",
   };
 
   return (
@@ -1095,6 +1100,7 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
         const typeLabel: Record<string, string> = {
           poster: "Poster", text: "Tekst", image: "Foto", split: "Split", quote: "Quote", divider: "Divider",
           events: "Agenda", pakdemic: "Pak de Mic", crew: "Crew", buurtpost: "Buurtpost", terugblik: "Terugblik", joinus: "Join Ons",
+          stat: "Statistiek", highlight: "Highlight", ticket: "Ticket", social: "Social", colofon: "Colofon",
         };
         const styleLabel: Record<string, string> = {
           black: "Zwart", orange: "Accent", mint: "Mint", cream: "Licht", transparent: "Doorz.",

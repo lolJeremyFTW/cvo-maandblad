@@ -573,127 +573,6 @@ function CustomBlockView({
         );
       case "events": {
         const eventsData = block.blockEvents ?? content?.events ?? [];
-        const variant = block.designVariant ?? 1;
-
-        // Variant 2 — bold card tiles per event
-        if (variant === 2) {
-          return (
-            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
-              {/* Header */}
-              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Agenda"}</span>
-                <span style={{ fontSize: 6.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.7 }}>{content?.month ?? ""} {content?.year ?? ""}</span>
-              </div>
-              {/* Card tiles */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                {eventsData.map((ev, i) => (
-                  <div key={i} style={{
-                    flex: "1 1 0", display: "flex", alignItems: "center", gap: 0,
-                    borderBottom: i < eventsData.length - 1 ? `2px solid ${bg}30` : "none",
-                    background: i % 2 === 0 ? `${textColor}12` : "transparent",
-                    overflow: "hidden",
-                  }}>
-                    {/* Giant day number */}
-                    <div style={{
-                      minWidth: 52, flexShrink: 0, textAlign: "center",
-                      fontFamily: "var(--font-archivo-black)", fontSize: 26, fontWeight: 900,
-                      color: "var(--color-cvo-orange,#F15B2B)", lineHeight: 1,
-                      padding: "0 4px",
-                    }}>{ev.day}</div>
-                    <div style={{ width: 2, alignSelf: "stretch", background: `${textColor}20`, flexShrink: 0 }} />
-                    <div style={{ flex: 1, padding: "4px 10px", minWidth: 0, overflow: "hidden" }}>
-                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
-                      <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.month} · {ev.detail}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        // Variant 3 — timeline with dot markers
-        if (variant === 3) {
-          return (
-            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              {/* Header pill */}
-              <div style={{ padding: `6px ${padVal}`, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase", color: textColor }}>{block.headline || "Agenda"}</span>
-                <div style={{ flex: 1, height: 2, background: `${textColor}25` }} />
-                <span style={{ fontSize: 6.5, letterSpacing: "0.18em", textTransform: "uppercase", color: textColor, opacity: 0.5 }}>{content?.month ?? ""}</span>
-              </div>
-              {/* Timeline */}
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", paddingLeft: padVal, paddingRight: padVal, gap: 0 }}>
-                {eventsData.map((ev, i) => (
-                  <div key={i} style={{ flex: "1 1 0", display: "flex", alignItems: "center", gap: 8, minHeight: 0, borderBottom: i < eventsData.length - 1 ? `1px dashed ${textColor}20` : "none" }}>
-                    {/* Dot + date */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, width: 32 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-cvo-orange,#F15B2B)" }} />
-                      <span style={{ fontSize: 7, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1 }}>{ev.day}</span>
-                      <span style={{ fontSize: 5.5, color: textColor, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ev.month}</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
-                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        // Variant 4 — full-bleed date banners
-        if (variant === 4) {
-          return (
-            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <div style={{ background: textColor, color: bg, padding: `4px ${padVal}`, flexShrink: 0 }}>
-                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Agenda"}</span>
-              </div>
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                {eventsData.map((ev, i) => (
-                  <div key={i} style={{ flex: "1 1 0", display: "flex", minHeight: 0, borderBottom: `1px solid ${textColor}15` }}>
-                    {/* Date strip */}
-                    <div style={{ background: "var(--color-cvo-orange,#F15B2B)", minWidth: 38, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: 16, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{ev.day}</span>
-                      <span style={{ fontSize: 6, color: "#fff", opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.month}</span>
-                    </div>
-                    {/* Title + detail */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "3px 10px", minWidth: 0, overflow: "hidden" }}>
-                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
-                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        // Variant 5 — minimal, just text lines with month accent
-        if (variant === 5) {
-          return (
-            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", padding: padVal, gap: 4 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexShrink: 0 }}>
-                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase", color: textColor }}>{block.headline || "Agenda"}</span>
-                <span style={{ fontSize: 7, color: "var(--color-cvo-orange,#F15B2B)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em" }}>{content?.month ?? ""}</span>
-              </div>
-              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
-                {eventsData.map((ev, i) => (
-                  <div key={i} style={{ flex: "1 1 0", display: "flex", gap: 8, alignItems: "center", borderBottom: `1px solid ${textColor}15`, minHeight: 0, overflow: "hidden" }}>
-                    <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: 13, color: "var(--color-cvo-orange,#F15B2B)", fontWeight: 900, minWidth: 22, textAlign: "right", flexShrink: 0 }}>{ev.day}</span>
-                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
-                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.45, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        // Variant 1 (default) — date column with vertical bar
         return (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {/* Header bar */}
@@ -1008,9 +887,9 @@ function CustomBlockView({
         );
       }
       case "buurtpost": {
-        const bpHeadline = content?.buurtpostHeadline ?? "";
-        const bpBody = content?.buurtpostBody ?? "";
-        const bpImage = content?.buurtpostImage ?? "";
+        const bpHeadline = block.headline || (content?.buurtpostHeadline ?? "");
+        const bpBody = block.body || (content?.buurtpostBody ?? "");
+        const bpImage = block.image || (content?.buurtpostImage ?? "");
         return (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {/* Image top */}
@@ -1140,7 +1019,25 @@ function CustomBlockView({
       }}
       onClick={onSelect}
     >
-      {renderContent()}
+      {/* Universal background image — works for ALL content types */}
+      {block.image && block.contentType !== "image" && block.contentType !== "split" && block.contentType !== "poster" && block.contentType !== "buurtpost" && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src={block.image}
+            alt=""
+            style={{
+              width: `${block.imageSize ?? 100}%`,
+              height: `${block.imageSize ?? 100}%`,
+              maxWidth: "100%", maxHeight: "100%",
+              objectFit: block.imageFit ?? "cover",
+              opacity: (block.imageOpacity ?? 40) / 100,
+            }}
+          />
+        </div>
+      )}
+      <div className="relative z-10" style={{ width: "100%", height: "100%" }}>
+        {renderContent()}
+      </div>
 
       {/* Hover overlay toolbar */}
       {onEdit && (

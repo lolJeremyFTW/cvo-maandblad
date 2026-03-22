@@ -311,17 +311,26 @@ function BlockEditor({
               />
             </div>
 
-            {(block.contentType === "image" || block.contentType === "split" || block.contentType === "poster") && (
-              <div>
-                <Label>Afbeelding</Label>
-                <ImgUpload
-                  label="foto uploaden"
-                  src={block.image}
-                  onUpload={(v) => onPatch({ image: v })}
-                  className="w-full aspect-video"
-                />
-              </div>
-            )}
+            {/* ── Afbeelding — beschikbaar voor ALLE block types ── */}
+            <div>
+              <Label>
+                {block.contentType === "image" ? "Foto" :
+                 block.contentType === "split" ? "Foto (split-zijde)" :
+                 "Foto / Achtergrond (optioneel)"}
+              </Label>
+              <ImgUpload
+                label="foto uploaden"
+                src={block.image}
+                onUpload={(v) => onPatch({ image: v })}
+                className="w-full aspect-video"
+              />
+              {block.image && (
+                <button type="button" onClick={() => onPatch({ image: "" })}
+                  className="mt-1 text-[9px] text-red-400 hover:text-red-600 font-bold font-archivo uppercase">
+                  Foto verwijderen
+                </button>
+              )}
+            </div>
 
             {(block.contentType === "split" || block.contentType === "poster") && (
               <div>
@@ -348,10 +357,11 @@ function BlockEditor({
               </div>
             )}
 
-            {(block.contentType === "image" || block.contentType === "split" || block.contentType === "poster" || block.contentType === "buurtpost") && (
+            {/* Foto-instellingen voor alle types */}
+            {block.image && (
               <>
                 <div>
-                  <Label>Afbeelding Grootte: {block.imageSize ?? 100}%</Label>
+                  <Label>Foto grootte: {block.imageSize ?? 100}%</Label>
                   <input
                     type="range"
                     min={10}

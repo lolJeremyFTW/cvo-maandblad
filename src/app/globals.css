@@ -43,15 +43,11 @@ body {
     margin: 0;
   }
 
-  /* Force browsers to print ALL background colors and images exactly as shown */
+  /* Force browsers to print ALL background colors, images, and shadows exactly as shown */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
-  }
-
-  /* Verberg ALLES via visibility — achtergrondkleuren blijven intact */
-  * {
     visibility: hidden !important;
   }
 
@@ -94,6 +90,7 @@ body {
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    box-shadow: none !important; /* only remove the outer magazine shadow, inner 3D shadows stay */
     overflow: hidden !important;
     page-break-after: avoid !important;
     break-after: avoid !important;

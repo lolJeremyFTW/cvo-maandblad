@@ -1636,7 +1636,7 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
         <div className="flex justify-between items-center px-5 py-2 text-[8.5px] font-bold uppercase tracking-[0.1em] text-gray-400 font-archivo">
           <span>
             CLUB<span style={{ color: "var(--color-cvo-orange)", textTransform: "none" }}>van</span>ONS
-            {" — Urban Living Lab Breda"}
+            {` — Urban Living Lab ${content.city || "Breda"}`}
           </span>
           <span>Editie {content.edition} — {content.year}</span>
         </div>

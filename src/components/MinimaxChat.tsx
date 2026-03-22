@@ -514,25 +514,65 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
       imageDataUrl: pendingImage?.dataUrl,
     };
 
-    // Compress image before sending to API to avoid payload-size errors
-    let imageBase64: string | null = null;
-    let imageMimeType: string | null = null;
+    // ── Step 1: If image, call VLM endpoint FIRST (separate request to stay under Vercel 10s limit)
+    let vlmDescription: string | null = null;
     if (pendingImage) {
-      const compressed = await compressForApi(pendingImage.dataUrl);
-      // After JPEG compression the mime type is always image/jpeg
-      imageBase64 = compressed.split(",")[1] ?? null;
-      imageMimeType = "image/jpeg";
+      setMessages((prev) => [...prev, userMsg]);
+      setLoadingLabel("Afbeelding analyseren...");
+      setInput("");
+      setLoading(true);
+
+      try {
+        const compressed = await compressForApi(pendingImage.dataUrl);
+        const imageBase64 = compressed.split(",")[1] ?? null;
+
+        const vlmRes = await fetch("/api/vlm-analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64,
+            imageMimeType: "image/jpeg",
+            prompt: userContent || "Beschrijf deze afbeelding gedetailleerd in het Nederlands: wat zie je, sfeer, kleuren, mensen, locatie, stijl. Is de foto geschikt als magazine-afbeelding?",
+          }),
+        });
+        const vlmData = await vlmRes.json();
+
+        if (vlmData.description) {
+          vlmDescription = vlmData.description;
+          setLoadingLabel("Foto herkend — bezig met AI response...");
+        } else {
+          console.warn("VLM failed:", vlmData.error);
+          // Show warning but continue — AI will still respond, just without image context
+          setMessages((prev) => [...prev, {
+            role: "assistant" as const,
+            content: `⚠️ Afbeelding analyse mislukt (${vlmData.error || "onbekende fout"}). Ik ga verder zonder beeldherkenning.`,
+          }]);
+        }
+      } catch (e) {
+        console.warn("VLM request failed:", e);
+        setMessages((prev) => [...prev, {
+          role: "assistant" as const,
+          content: "⚠️ Afbeelding analyse timeout — ik ga verder zonder beeldherkenning.",
+        }]);
+      }
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
     }
 
-    setMessages((prev) => [...prev, userMsg]);
-    setLoadingLabel(isBigBuild(userContent) ? "Magazine aan het bouwen..." : pendingImage ? "Afbeelding analyseren..." : "Aan het schrijven...");
-    setInput("");
     setPendingImage(null);
+    setLoadingLabel(isBigBuild(userContent) ? "Magazine aan het bouwen..." : "Aan het schrijven...");
     setLoading(true);
 
+    // ── Step 2: Call main chat endpoint (text only — VLM description injected as text)
     try {
       const magazineContext = contentRef.current ? buildMagazineContext(contentRef.current) : undefined;
       const profileContext = buildProfileContext(activeProfile);
+
+      // Inject VLM description into the user message content
+      const enrichedContent = vlmDescription
+        ? `${userContent || "Analyseer deze afbeelding en geef suggesties voor het magazine."}\n\n[AFBEELDING ANALYSE]\n${vlmDescription}`
+        : userContent;
 
       // 58 s client-side timeout — just under Vercel's 60 s maxDuration
       const controller = new AbortController();
@@ -545,14 +585,13 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
           signal: controller.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: [...messages, userMsg].map((m) => ({
+            messages: [...messages, { ...userMsg, content: enrichedContent }].map((m) => ({
               role: m.role,
               content: m.content,
             })),
             magazineContext,
             profileContext,
-            imageBase64,
-            imageMimeType,
+            // No more imageBase64 — VLM is handled separately
           }),
         });
         data = await res.json();
@@ -575,7 +614,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
         hasEdit = true;
       }
 
-      const noEditWarning = !hasEdit && !profileUpdate && isEditRequest(userContent) && !imageBase64
+      const noEditWarning = !hasEdit && !profileUpdate && isEditRequest(userContent) && !vlmDescription
         ? "\n\n⚠️ De AI paste niets aan. Probeer het opnieuw of wees specifieker."
         : "";
 

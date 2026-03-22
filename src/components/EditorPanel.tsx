@@ -917,12 +917,12 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
             <div>
               <Label>Ruimte rondom: {watch("logoPadding") ?? 8}px</Label>
               <input
-                type="range" min={-25} max={60} step={1}
+                type="range" min={-50} max={60} step={1}
                 {...register("logoPadding", { valueAsNumber: true })}
                 className="w-full accent-cvo-orange"
               />
               <div className="flex justify-between text-[8px] text-gray-400 font-archivo mt-0.5">
-                <span>-25</span><span>0</span><span>60</span>
+                <span>-50</span><span>0</span><span>60</span>
               </div>
             </div>
           </div>

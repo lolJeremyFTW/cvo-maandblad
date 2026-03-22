@@ -100,6 +100,18 @@ function buildMagazineContext(content: MagazineContent): string {
     .join("\n");
   const crewList = content.crew.map((c) => `  • ${c.name} (${c.role})`).join("\n");
 
+  // Analyse current design preferences for AI context
+  const allCards = content.customRows.flatMap(r => r.cards);
+  const styleCounts: Record<string, number> = {};
+  const typeCounts: Record<string, number> = {};
+  const cardsWithImages = allCards.filter(c => !!c.image).length;
+  allCards.forEach(c => {
+    styleCounts[c.style] = (styleCounts[c.style] || 0) + 1;
+    typeCounts[c.contentType] = (typeCounts[c.contentType] || 0) + 1;
+  });
+  const prefStyle = Object.entries(styleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "black";
+  const prefTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t).join(", ");
+
   // Strip base64 images from customRows — replace with human-readable marker
   const slimRows = content.customRows.map(row => ({
     ...row,
@@ -157,6 +169,13 @@ Tekst: "${content.flashbackBody?.slice(0, 200) || "(leeg)"}"
 
 OVER CLUBVANONS:
 "${content.companyDescription?.slice(0, 200) || "(leeg)"}"
+
+STIJLVOORKEUREN (geleerd van huidige layout):
+• Meest gebruikte stijl: ${prefStyle} (${styleCounts[prefStyle] || 0}× gebruikt)
+• Stijlverdeling: ${Object.entries(styleCounts).map(([k, v]) => `${k}=${v}`).join(", ") || "nvt"}
+• Meest gebruikte types: ${prefTypes || "nvt"}
+• Blokken met foto: ${cardsWithImages} van ${allCards.length}
+⚠️ GEBRUIK DEZE VOORKEUREN: Als de redacteur nieuwe blokken wil, gebruik dezelfde stijlen en types die ze al gebruiken. Bewaar ALTIJD bestaande afbeeldingen met "[AFBEELDING AANWEZIG ✓]".
 
 CUSTOM RIJEN (${content.customRows.length} rijen) — volledige JSON (images vervangen door marker):
 ${customRowsJson}

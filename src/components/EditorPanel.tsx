@@ -337,20 +337,17 @@ function BlockEditor({
               )}
             </div>
 
-            {(block.contentType === "split" || block.contentType === "poster") && (
+            {block.image && (
               <div>
                 <Label>Afbeelding positie</Label>
                 <div className="flex border-2 border-gray-200 overflow-hidden">
-                  {(block.contentType === "split"
-                    ? [["left", "Links"], ["right", "Rechts"]]
-                    : [["bg", "Achtergrond"]]
-                  ).map(([val, lbl]) => (
+                  {[["bg", "Achtergrond"], ["left", "Links"], ["right", "Rechts"]].map(([val, lbl]) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => onPatch({ imagePosition: val as CustomBlock["imagePosition"] })}
                       className={`flex-1 py-2 text-[10px] font-bold uppercase font-archivo transition-colors ${
-                        (block.imagePosition || "left") === val
+                        (block.imagePosition || "bg") === val
                           ? "bg-cvo-black text-cvo-cream"
                           : "hover:bg-gray-50 text-gray-500"
                       }`}

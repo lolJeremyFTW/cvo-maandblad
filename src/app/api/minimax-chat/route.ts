@@ -280,17 +280,20 @@ SCHEMA VOOR EEN BLOK (CustomBlock):
                                  // Niet op: crew, events, pakdemic, terugblik, joinus (eigen badges)
 
   // Afbeelding
-  // ⚠️ AFBEELDING REGELS — LEES GOED:
+  // ⚠️⚠️⚠️ AFBEELDING REGELS — EXTREEM BELANGRIJK:
   // • Afbeelding VERWIJDEREN  → "image": ""
   // • Afbeelding BEHOUDEN     → "image": "[AFBEELDING AANWEZIG ✓]"   ← gebruik deze exacte string
   // • Nieuwe afbeelding       → "image": "https://..."
-  // Gebruik ALTIJD "[AFBEELDING AANWEZIG ✓]" als je de huidige foto wilt bewaren maar customRows
-  // opnieuw opbouwt. De frontend vervangt dit automatisch met de echte foto-data.
+  // ⚠️ ALTIJD "[AFBEELDING AANWEZIG ✓]" GEBRUIKEN als een blok al een foto heeft!
+  //    Als je customRows opnieuw opbouwt: ELKE KAART die "[AFBEELDING AANWEZIG ✓]" had,
+  //    MOET deze string behouden. De frontend vervangt dit automatisch met de echte foto-data.
+  //    Als je dit vergeet, gaat de foto verloren! CHECK ELKE KAART.
   // ⚠️ Voor "terugblik" contentType: image veld heeft GEEN EFFECT. Foto's komen uit flashbackImages.
   "image": "[AFBEELDING AANWEZIG ✓]",  // of "" om te verwijderen
   "imagePosition": "bg",         // "left" | "right" | "bg"
-                                 // bg = foto vult hele blok (voor poster/image)
-                                 // left/right = foto naast tekst (voor split)
+                                 // bg = foto als achtergrond van het hele blok (alle types)
+                                 // left = foto links (45%), tekst rechts (alle types)
+                                 // right = tekst links, foto rechts (45%) (alle types)
   "imageSize": 100,              // 10–200 (percentage — 100=normaal, >100=ingezoomd)
   "imageFit": "cover",           // "cover"=vult vlak | "contain"=volledig zichtbaar | "fill"=uitgerekt
   "imageOpacity": 80,            // 0–100 (0=onzichtbaar, 100=volledig zichtbaar)
@@ -738,6 +741,16 @@ BLOK HOOGTES — gebruik dit als richtlijn:
 
 GOLDEN RULE: Tel alle rijhoogtes op. Totaal MOET ≈ 1000px zijn voor één A4.
 Voorbeeld goede verdeling: hero 320 + content 220 + agenda 180 + crew 150 + quote 120 = 990px ✓
+
+⚠️ STIJLVOORKEUREN VAN DE REDACTEUR:
+Kijk in de STIJLVOORKEUREN sectie van de magazine context. Gebruik ALTIJD de stijlen en types die de redacteur al gebruikt. Als ze veel "black" blokken hebben, maak nieuwe blokken ook "black". Als ze "orange" accent gebruiken, gebruik dat ook. KOPIEER hun stijl. Verander NOOIT de stijl tenzij de redacteur het expliciet vraagt.
+
+⚠️ BEWAAR ALTIJD BESTAANDE AFBEELDINGEN:
+Wanneer je customRows opnieuw opbouwt of aanpast:
+1. CHECK elke kaart in de huidige customRows JSON
+2. Als een kaart "image": "[AFBEELDING AANWEZIG ✓]" heeft → behoud deze marker
+3. VERLIES NOOIT een afbeelding — de redacteur heeft moeite gedaan om die te uploaden
+4. Bij twijfel: ALTIJD "[AFBEELDING AANWEZIG ✓]" invullen
 
 TEKST SCHAALT MEE MET BLOK:
 • 80px blok: alleen headline, max 4 woorden, headlineSize 18-24px, padding "sm", GEEN body

@@ -1333,25 +1333,37 @@ function CustomBlockView({
       }}
       onClick={onSelect}
     >
-      {/* Universal background image — works for ALL content types */}
-      {block.image && block.contentType !== "image" && block.contentType !== "split" && block.contentType !== "poster" && block.contentType !== "buurtpost" && block.contentType !== "social" && (
+      {/* Universal background image — bg mode (for types that don't handle images internally) */}
+      {block.image && !["image", "split", "poster", "buurtpost", "social"].includes(block.contentType)
+        && (block.imagePosition || "bg") === "bg" && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img
             src={block.image}
             alt=""
             style={{
-              width: `${block.imageSize ?? 100}%`,
-              height: `${block.imageSize ?? 100}%`,
-              maxWidth: "100%", maxHeight: "100%",
+              width: "100%", height: "100%",
               objectFit: block.imageFit ?? "cover",
               opacity: (block.imageOpacity ?? 40) / 100,
             }}
           />
         </div>
       )}
-      <div className="relative z-10" style={{ width: "100%", height: "100%" }}>
-        {renderContent()}
-      </div>
+      {/* Content — with optional left/right image split for any block type */}
+      {block.image && !["image", "split", "poster", "buurtpost", "social"].includes(block.contentType)
+        && ["left", "right"].includes(block.imagePosition || "bg") ? (
+        <div style={{ display: "flex", flexDirection: block.imagePosition === "right" ? "row-reverse" : "row", width: "100%", height: "100%" }}>
+          <div style={{ width: "45%", height: "100%", overflow: "hidden", flexShrink: 0 }}>
+            <img src={block.image} alt="" style={{ width: "100%", height: "100%", objectFit: block.imageFit ?? "cover", opacity: (block.imageOpacity ?? 100) / 100 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
+            {renderContent()}
+          </div>
+        </div>
+      ) : (
+        <div className="relative z-10" style={{ width: "100%", height: "100%" }}>
+          {renderContent()}
+        </div>
+      )}
 
       {/* Hover overlay toolbar */}
       {onEdit && (

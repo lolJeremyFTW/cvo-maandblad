@@ -448,8 +448,27 @@ function CustomBlockView({
     document.addEventListener("mouseup", onUp);
   };
 
-  const hs = block.headlineSize || 24;
-  const bs = block.bodySize || 10;
+  // ── Auto-scale: shrink headline to fit available height ──
+  // Calculate available height for content (approx based on block height)
+  const blockH = block.heightPx ?? 200;
+  const padPx = block.padding === "none" ? 0 : block.padding === "sm" ? 10 : block.padding === "lg" ? 28 : 18;
+  const availH = blockH - padPx * 2;
+
+  // Calculate headline font size — shrink if it would overflow
+  const requestedHs = block.headlineSize || 24;
+  const headlineLen = (block.headline || "").length;
+  // Estimate lines: assume ~8 chars per line at 24px in a 200px wide block
+  const charsPerLine = Math.max(4, Math.floor((blockCols / 12) * 794 / (requestedHs * 0.65)));
+  const estLines = Math.ceil(headlineLen / Math.max(1, charsPerLine));
+  const estHeadlineH = estLines * requestedHs * 1.15; // lineHeight ~1.15
+  const bodyH = block.body ? Math.min(60, (block.bodySize || 10) * 4) : 0;
+  const tagH = block.tag ? 16 : 0;
+  const totalEstH = estHeadlineH + bodyH + tagH;
+  // If estimated content height exceeds available, scale down
+  const scaleFactor = totalEstH > availH && availH > 0 ? Math.max(0.35, availH / totalEstH) : 1;
+  const hs = Math.max(8, Math.round(requestedHs * scaleFactor));
+  const bs = Math.max(6, Math.round((block.bodySize || 10) * Math.max(0.6, scaleFactor)));
+
   const align = block.textAlign || "left";
   const transform = block.uppercase ? "uppercase" : "none";
   const fontStyle = block.italic ? "italic" : "normal";
@@ -465,9 +484,9 @@ function CustomBlockView({
             {block.image && block.imagePosition === "bg" && (
               <img src={block.image} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: block.imageFit ?? "cover", opacity: ((block.imageOpacity ?? 100) / 100) * 0.4, width: `${block.imageSize ?? 100}%`, height: `${block.imageSize ?? 100}%`, maxWidth: "100%", maxHeight: "100%" }} />
             )}
-            <div className="absolute inset-0 flex flex-col justify-end" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
+            <div className="absolute inset-0 flex flex-col justify-end overflow-hidden" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
               {block.tag && (
-                <span className="text-[8px] font-bold uppercase tracking-[0.25em] mb-2 opacity-70 font-archivo" style={{ color: textColor }}>
+                <span className="text-[8px] font-bold uppercase tracking-[0.25em] mb-2 opacity-70 font-archivo shrink-0" style={{ color: textColor }}>
                   {block.tag}
                 </span>
               )}
@@ -475,29 +494,29 @@ function CustomBlockView({
                 value={block.headline}
                 onEdit={onEdit ? (v) => onPatch({ headline: v }) : undefined}
                 className={headlineCls}
-                style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"], fontStyle }}
+                style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"], fontStyle, wordBreak: "break-word", overflowWrap: "break-word" }}
               />
             </div>
           </div>
         );
       case "text":
         return (
-          <div className="absolute inset-0 flex flex-col justify-end gap-2" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
+          <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
             {block.tag && (
-              <span className="text-[8px] font-bold uppercase tracking-[0.25em] opacity-60 font-archivo" style={{ color: textColor }}>{block.tag}</span>
+              <span className="text-[8px] font-bold uppercase tracking-[0.25em] opacity-60 font-archivo shrink-0" style={{ color: textColor }}>{block.tag}</span>
             )}
             <E
               value={block.headline}
               onEdit={onEdit ? (v) => onPatch({ headline: v }) : undefined}
               className={headlineCls}
-              style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"], fontStyle }}
+              style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"], fontStyle, wordBreak: "break-word", overflowWrap: "break-word" }}
             />
             <E
               as="p"
               value={block.body}
               onEdit={onEdit ? (v) => onPatch({ body: v }) : undefined}
               className={bodyCls}
-              style={{ fontSize: `${bs}px`, color: textColor }}
+              style={{ fontSize: `${bs}px`, color: textColor, wordBreak: "break-word", overflowWrap: "break-word" }}
               multiLine
             />
           </div>
@@ -532,21 +551,21 @@ function CustomBlockView({
       case "split": {
         const imgLeft = block.imagePosition !== "right";
         return (
-          <div className="absolute inset-0 flex">
+          <div className="absolute inset-0 flex overflow-hidden">
             {imgLeft && (
-              <div className="w-[45%] h-full relative shrink-0">
+              <div className="w-[45%] h-full relative shrink-0 overflow-hidden">
                 <FotoSlot src={block.image} label="foto" onUpload={onEdit ? (v) => onPatch({ image: v }) : undefined} className="absolute inset-0 w-full h-full" />
               </div>
             )}
-            <div className="flex-1 flex flex-col justify-end gap-1.5" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
-              {block.tag && <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60 font-archivo" style={{ color: textColor }}>{block.tag}</span>}
+            <div className="flex-1 flex flex-col justify-end gap-1.5 overflow-hidden" style={{ padding: padVal, textAlign: align as React.CSSProperties["textAlign"] }}>
+              {block.tag && <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60 font-archivo shrink-0" style={{ color: textColor }}>{block.tag}</span>}
               <E value={block.headline} onEdit={onEdit ? (v) => onPatch({ headline: v }) : undefined}
-                className={headlineCls} style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"] }} />
+                className={headlineCls} style={{ fontSize: `${hs}px`, color: textColor, textTransform: transform as React.CSSProperties["textTransform"], wordBreak: "break-word", overflowWrap: "break-word" }} />
               <E as="p" value={block.body} onEdit={onEdit ? (v) => onPatch({ body: v }) : undefined}
-                className={bodyCls} style={{ fontSize: `${bs}px`, color: textColor }} multiLine />
+                className={bodyCls} style={{ fontSize: `${bs}px`, color: textColor, wordBreak: "break-word", overflowWrap: "break-word" }} multiLine />
             </div>
             {!imgLeft && (
-              <div className="w-[45%] h-full relative shrink-0">
+              <div className="w-[45%] h-full relative shrink-0 overflow-hidden">
                 <FotoSlot src={block.image} label="foto" onUpload={onEdit ? (v) => onPatch({ image: v }) : undefined} className="absolute inset-0 w-full h-full" />
               </div>
             )}
@@ -555,14 +574,14 @@ function CustomBlockView({
       }
       case "quote":
         return (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center" style={{ padding: padVal }}>
-            <div className="text-[48px] font-archivo-black leading-none opacity-20" style={{ color: textColor }}>&ldquo;</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center overflow-hidden" style={{ padding: padVal }}>
+            <div className="text-[48px] font-archivo-black leading-none opacity-20 shrink-0" style={{ color: textColor }}>&ldquo;</div>
             <E value={block.headline} onEdit={onEdit ? (v) => onPatch({ headline: v }) : undefined}
               className={`${headlineCls} text-center`}
-              style={{ fontSize: `${hs}px`, color: textColor, fontStyle }} />
+              style={{ fontSize: `${hs}px`, color: textColor, fontStyle, wordBreak: "break-word", overflowWrap: "break-word" }} />
             {block.body && (
               <E as="p" value={block.body} onEdit={onEdit ? (v) => onPatch({ body: v }) : undefined}
-                className="font-archivo opacity-50 text-center" style={{ fontSize: `${bs}px`, color: textColor }} />
+                className="font-archivo opacity-50 text-center" style={{ fontSize: `${bs}px`, color: textColor, wordBreak: "break-word", overflowWrap: "break-word" }} />
             )}
           </div>
         );
@@ -921,8 +940,8 @@ function CustomBlockView({
             )}
             {/* Text */}
             <div style={{ flex: 1, padding: padVal, display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 4, overflow: "hidden" }}>
-              <div className="font-archivo-black" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.05, textTransform: transform as React.CSSProperties["textTransform"] }}>{bpHeadline}</div>
-              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.5, margin: 0, overflow: "hidden" }}>{bpBody}</p>
+              <div className="font-archivo-black" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.05, textTransform: transform as React.CSSProperties["textTransform"], wordBreak: "break-word", overflowWrap: "break-word" }}>{bpHeadline}</div>
+              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.5, margin: 0, overflow: "hidden", wordBreak: "break-word", overflowWrap: "break-word" }}>{bpBody}</p>
             </div>
           </div>
         );
@@ -955,8 +974,8 @@ function CustomBlockView({
                 fontSize: 7, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em",
                 color: textColor, opacity: 0.5, fontFamily: "var(--font-archivo-black)",
               }}>▶ Terugblik</span>
-              <div className="font-archivo-black" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.05, textTransform: transform as React.CSSProperties["textTransform"] }}>{fbHeadline}</div>
-              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.5, margin: 0 }}>{fbBody}</p>
+              <div className="font-archivo-black" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.05, textTransform: transform as React.CSSProperties["textTransform"], wordBreak: "break-word", overflowWrap: "break-word" }}>{fbHeadline}</div>
+              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.5, margin: 0, wordBreak: "break-word", overflowWrap: "break-word" }}>{fbBody}</p>
             </div>
           </div>
         );
@@ -972,7 +991,7 @@ function CustomBlockView({
               pointerEvents: "none",
             }} />
             <div style={{
-              position: "absolute", inset: 0, padding: padVal,
+              position: "absolute", inset: 0, padding: padVal, overflow: "hidden",
               display: "flex", flexDirection: "column", justifyContent: "center", gap: 10,
             }}>
               {/* Small badge */}
@@ -980,14 +999,14 @@ function CustomBlockView({
                 display: "inline-flex", alignItems: "center", gap: 4,
                 background: textColor, color: bg, padding: "2px 8px",
                 fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em",
-                fontFamily: "var(--font-archivo-black)", alignSelf: "flex-start",
+                fontFamily: "var(--font-archivo-black)", alignSelf: "flex-start", flexShrink: 0,
               }}>★ Community</div>
               {/* Headline */}
-              <div className="font-archivo-black uppercase" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.0 }}>
+              <div className="font-archivo-black uppercase" style={{ fontSize: `${hs}px`, color: textColor, lineHeight: 1.0, wordBreak: "break-word", overflowWrap: "break-word" }}>
                 {block.headline || "Join Ons"}
               </div>
               {/* Body */}
-              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.55, margin: 0, maxWidth: 240 }}>
+              <p className="font-archivo" style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.55, margin: 0, maxWidth: 240, wordBreak: "break-word", overflowWrap: "break-word" }}>
                 {block.body || "Word lid van de CLUBvanONS community en maak deel uit van iets bijzonders."}
               </p>
               {/* CTA button */}

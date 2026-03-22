@@ -44,6 +44,13 @@ export interface CustomBlock {
   // Layout
   padding: "none" | "sm" | "md" | "lg";
   borderTop: boolean;
+
+  // Per-block content overrides (so multiple blocks can have independent data)
+  blockEvents?: { day: string; month: string; title: string; detail: string }[];
+  blockPakText?: string;
+
+  // Design variant (1–5) for supported content types
+  designVariant?: number;
 }
 
 export interface CustomRow {
@@ -565,7 +572,128 @@ function CustomBlockView({
           </div>
         );
       case "events": {
-        const eventsData = content?.events ?? [];
+        const eventsData = block.blockEvents ?? content?.events ?? [];
+        const variant = block.designVariant ?? 1;
+
+        // Variant 2 — bold card tiles per event
+        if (variant === 2) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
+              {/* Header */}
+              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Agenda"}</span>
+                <span style={{ fontSize: 6.5, letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.7 }}>{content?.month ?? ""} {content?.year ?? ""}</span>
+              </div>
+              {/* Card tiles */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                {eventsData.map((ev, i) => (
+                  <div key={i} style={{
+                    flex: "1 1 0", display: "flex", alignItems: "center", gap: 0,
+                    borderBottom: i < eventsData.length - 1 ? `2px solid ${bg}30` : "none",
+                    background: i % 2 === 0 ? `${textColor}12` : "transparent",
+                    overflow: "hidden",
+                  }}>
+                    {/* Giant day number */}
+                    <div style={{
+                      minWidth: 52, flexShrink: 0, textAlign: "center",
+                      fontFamily: "var(--font-archivo-black)", fontSize: 26, fontWeight: 900,
+                      color: "var(--color-cvo-orange,#F15B2B)", lineHeight: 1,
+                      padding: "0 4px",
+                    }}>{ev.day}</div>
+                    <div style={{ width: 2, alignSelf: "stretch", background: `${textColor}20`, flexShrink: 0 }} />
+                    <div style={{ flex: 1, padding: "4px 10px", minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
+                      <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.month} · {ev.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 3 — timeline with dot markers
+        if (variant === 3) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              {/* Header pill */}
+              <div style={{ padding: `6px ${padVal}`, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase", color: textColor }}>{block.headline || "Agenda"}</span>
+                <div style={{ flex: 1, height: 2, background: `${textColor}25` }} />
+                <span style={{ fontSize: 6.5, letterSpacing: "0.18em", textTransform: "uppercase", color: textColor, opacity: 0.5 }}>{content?.month ?? ""}</span>
+              </div>
+              {/* Timeline */}
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", paddingLeft: padVal, paddingRight: padVal, gap: 0 }}>
+                {eventsData.map((ev, i) => (
+                  <div key={i} style={{ flex: "1 1 0", display: "flex", alignItems: "center", gap: 8, minHeight: 0, borderBottom: i < eventsData.length - 1 ? `1px dashed ${textColor}20` : "none" }}>
+                    {/* Dot + date */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, width: 32 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-cvo-orange,#F15B2B)" }} />
+                      <span style={{ fontSize: 7, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1 }}>{ev.day}</span>
+                      <span style={{ fontSize: 5.5, color: textColor, opacity: 0.55, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ev.month}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
+                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 4 — full-bleed date banners
+        if (variant === 4) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: textColor, color: bg, padding: `4px ${padVal}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Agenda"}</span>
+              </div>
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                {eventsData.map((ev, i) => (
+                  <div key={i} style={{ flex: "1 1 0", display: "flex", minHeight: 0, borderBottom: `1px solid ${textColor}15` }}>
+                    {/* Date strip */}
+                    <div style={{ background: "var(--color-cvo-orange,#F15B2B)", minWidth: 38, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: 16, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{ev.day}</span>
+                      <span style={{ fontSize: 6, color: "#fff", opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.1em" }}>{ev.month}</span>
+                    </div>
+                    {/* Title + detail */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "3px 10px", minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
+                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.5, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 5 — minimal, just text lines with month accent
+        if (variant === 5) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", padding: padVal, gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase", color: textColor }}>{block.headline || "Agenda"}</span>
+                <span style={{ fontSize: 7, color: "var(--color-cvo-orange,#F15B2B)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em" }}>{content?.month ?? ""}</span>
+              </div>
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}>
+                {eventsData.map((ev, i) => (
+                  <div key={i} style={{ flex: "1 1 0", display: "flex", gap: 8, alignItems: "center", borderBottom: `1px solid ${textColor}15`, minHeight: 0, overflow: "hidden" }}>
+                    <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: 13, color: "var(--color-cvo-orange,#F15B2B)", fontWeight: 900, minWidth: 22, textAlign: "right", flexShrink: 0 }}>{ev.day}</span>
+                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
+                      {ev.detail && <div style={{ fontSize: 7, color: textColor, opacity: 0.45, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.detail}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 1 (default) — date column with vertical bar
         return (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {/* Header bar */}
@@ -613,7 +741,67 @@ function CustomBlockView({
         );
       }
       case "pakdemic": {
-        const pakText = content?.pakDeMicText ?? "";
+        const pakText = block.blockPakText ?? content?.pakDeMicText ?? "";
+        const pdVariant = block.designVariant ?? 1;
+
+        // Variant 2 — centered bold layout
+        if (pdVariant === 2) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: padVal, gap: 8, textAlign: "center" }}>
+              <div style={{ fontSize: 60, fontFamily: "var(--font-archivo-black)", fontWeight: 900, color: "var(--color-cvo-orange,#F15B2B)", lineHeight: 0.8, opacity: 0.15, position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)", userSelect: "none", pointerEvents: "none" }}>&ldquo;</div>
+              <span style={{ display: "inline-block", background: "var(--color-cvo-orange,#F15B2B)", color: "#fff", fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", padding: "2px 10px", fontFamily: "var(--font-archivo-black)" }}>🎤 Pak de Mic</span>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor, textTransform: "uppercase", lineHeight: 1.0 }}>{block.headline || "Jij aan het woord"}</div>
+              <p style={{ fontFamily: "var(--font-archivo)", fontSize: `${bs}px`, color: textColor, opacity: 0.7, lineHeight: 1.6, margin: 0, maxWidth: 260 }}>{pakText}</p>
+            </div>
+          );
+        }
+
+        // Variant 3 — left accent stripe
+        if (pdVariant === 3) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex" }}>
+              <div style={{ width: 6, background: "var(--color-cvo-orange,#F15B2B)", flexShrink: 0 }} />
+              <div style={{ flex: 1, padding: padVal, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6, overflow: "hidden" }}>
+                <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--color-cvo-orange,#F15B2B)", fontFamily: "var(--font-archivo-black)" }}>🎤 Pak de Mic</span>
+                <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor, textTransform: "uppercase", lineHeight: 1.05 }}>{block.headline || "Jij aan het woord"}</div>
+                <p style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.6, margin: 0, fontFamily: "var(--font-archivo)" }}>{pakText}</p>
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 4 — minimal speech-bubble style
+        if (pdVariant === 4) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", padding: padVal, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 6 }}>
+              <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor, textTransform: "uppercase", lineHeight: 1.05 }}>{block.headline || "Jij aan het woord"}</div>
+              <div style={{ flex: 1, border: `2px solid ${textColor}20`, borderRadius: 2, padding: 8, display: "flex", alignItems: "center", overflow: "hidden" }}>
+                <p style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.75, lineHeight: 1.6, margin: 0, fontFamily: "var(--font-archivo)" }}>{pakText}</p>
+              </div>
+              <span style={{ display: "inline-block", background: textColor, color: bg, fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.18em", padding: "2px 8px", fontFamily: "var(--font-archivo-black)", alignSelf: "flex-start" }}>🎤 Jij bent de wijk</span>
+            </div>
+          );
+        }
+
+        // Variant 5 — dark feature with huge MIC type
+        if (pdVariant === 5) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
+              <div style={{ position: "absolute", bottom: -8, right: -4, fontFamily: "var(--font-archivo-black)", fontWeight: 900, fontSize: 72, color: textColor, opacity: 0.05, lineHeight: 1, userSelect: "none", pointerEvents: "none", textTransform: "uppercase" }}>MIC</div>
+              <div style={{ position: "absolute", inset: 0, padding: padVal, display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 20, height: 3, background: "var(--color-cvo-orange,#F15B2B)" }} />
+                  <span style={{ fontSize: 6.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: textColor, opacity: 0.5, fontFamily: "var(--font-archivo-black)" }}>Pak de Mic</span>
+                </div>
+                <div style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, color: textColor, textTransform: "uppercase", lineHeight: 1.0 }}>{block.headline || "Jij aan het woord"}</div>
+                <p style={{ fontSize: `${bs}px`, color: textColor, opacity: 0.7, lineHeight: 1.6, margin: 0, fontFamily: "var(--font-archivo)", flex: 1, overflow: "hidden" }}>{pakText}</p>
+                <span style={{ display: "inline-block", background: "var(--color-cvo-orange,#F15B2B)", color: "#fff", fontSize: 7, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", padding: "3px 10px", fontFamily: "var(--font-archivo-black)", alignSelf: "flex-start" }}>→ Stuur in</span>
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 1 (default) — big decorative quote mark
         return (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
             {/* Big decorative quote mark */}
@@ -644,6 +832,135 @@ function CustomBlockView({
       }
       case "crew": {
         const crewData = content?.crew ?? [];
+        const crewVariant = block.designVariant ?? 1;
+        const nameSize = Math.max(6, Math.round(36 / Math.max(crewData.length, 1)));
+        const roleSize = Math.max(5, Math.round(28 / Math.max(crewData.length, 1)));
+        const initSize = Math.max(7, Math.round(40 / Math.max(crewData.length, 1)));
+
+        // Variant 2 — horizontal list with name+role next to avatar
+        if (crewVariant === 2) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Meet The Crew"}</span>
+              </div>
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", gap: 0 }}>
+                {crewData.map((member, i) => (
+                  <div key={i} style={{ flex: "1 1 0", display: "flex", alignItems: "center", gap: 8, padding: `3px ${padVal}`, borderBottom: i < crewData.length - 1 ? `1px solid ${textColor}15` : "none", minHeight: 0, overflow: "hidden" }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", background: `${textColor}20`, border: `1.5px solid ${textColor}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {member.avatar ? <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 8, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>{member.name.slice(0, 2).toUpperCase()}</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                      <div style={{ fontSize: 7, color: textColor, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 3 — square photo cards (no circular clips)
+        if (crewVariant === 3) {
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Meet The Crew"}</span>
+              </div>
+              <div style={{ flex: 1, padding: padVal, overflow: "hidden", display: "flex", flexDirection: "row", gap: 4, alignItems: "stretch" }}>
+                {crewData.map((member, i) => (
+                  <div key={i} style={{ flex: "1 1 0%", minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                    {/* Square photo */}
+                    <div style={{ flex: 1, background: `${textColor}20`, overflow: "hidden", position: "relative", minHeight: 0 }}>
+                      {member.avatar ? <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: initSize, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", opacity: 0.4 }}>{member.name.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                      )}
+                      {/* Name overlay */}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)", padding: "8px 4px 3px" }}>
+                        <div style={{ fontSize: nameSize, fontWeight: 900, color: "#fff", fontFamily: "var(--font-archivo-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                        <div style={{ fontSize: Math.max(5, roleSize - 1), color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.role}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 4 — grid (2 rows × n cols)
+        if (crewVariant === 4) {
+          const cols = Math.ceil(crewData.length / 2);
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Meet The Crew"}</span>
+              </div>
+              <div style={{ flex: 1, padding: "6px", overflow: "hidden", display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: "1fr 1fr", gap: 4 }}>
+                {crewData.map((member, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, overflow: "hidden", minWidth: 0 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", overflow: "hidden", background: `${textColor}20`, border: `1.5px solid ${textColor}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {member.avatar ? <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 7, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>{member.name.slice(0, 2).toUpperCase()}</span>}
+                    </div>
+                    <div style={{ minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontSize: 8, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                      <div style={{ fontSize: 6, color: textColor, opacity: 0.5, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 5 — feature: first member large, rest in strip
+        if (crewVariant === 5) {
+          const [featured, ...rest] = crewData;
+          return (
+            <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ background: textColor, color: bg, padding: `5px ${padVal}`, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-archivo-black)", fontSize: `${hs}px`, fontWeight: 900, textTransform: "uppercase" }}>{block.headline || "Meet The Crew"}</span>
+              </div>
+              <div style={{ flex: 1, overflow: "hidden", display: "flex", gap: 0 }}>
+                {/* Featured member */}
+                {featured && (
+                  <div style={{ flex: "0 0 42%", position: "relative", overflow: "hidden" }}>
+                    <div style={{ width: "100%", height: "100%", background: `${textColor}20` }}>
+                      {featured.avatar ? <img src={featured.avatar} alt={featured.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: 20, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", opacity: 0.3 }}>{featured.name.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top,rgba(0,0,0,0.7),transparent)", padding: "16px 6px 4px" }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: "#fff", fontFamily: "var(--font-archivo-black)" }}>{featured.name}</div>
+                      <div style={{ fontSize: 6.5, color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{featured.role}</div>
+                    </div>
+                  </div>
+                )}
+                {/* Rest in vertical stack */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  {rest.map((member, i) => (
+                    <div key={i} style={{ flex: "1 1 0", display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderBottom: i < rest.length - 1 ? `1px solid ${textColor}15` : "none", overflow: "hidden" }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", background: `${textColor}20`, border: `1px solid ${textColor}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {member.avatar ? <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 6, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>{member.name.slice(0, 2).toUpperCase()}</span>}
+                      </div>
+                      <div style={{ minWidth: 0, overflow: "hidden" }}>
+                        <div style={{ fontSize: 8, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                        <div style={{ fontSize: 6, color: textColor, opacity: 0.5, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Variant 1 (default) — circular avatars in one row
         return (
           <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {/* Header */}
@@ -674,15 +991,15 @@ function CustomBlockView({
                       {member.avatar ? (
                         <img src={member.avatar} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
-                        <span style={{ fontSize: `${Math.max(7, Math.round(40 / crewData.length))}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>
+                        <span style={{ fontSize: `${initSize}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)" }}>
                           {member.name.slice(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
                   </div>
                   <div style={{ textAlign: "center", width: "100%" }}>
-                    <div style={{ fontSize: `${Math.max(6, Math.round(36 / crewData.length))}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
-                    <div style={{ fontSize: `${Math.max(5, Math.round(28 / crewData.length))}px`, color: textColor, opacity: 0.55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.06em" }}>{member.role}</div>
+                    <div style={{ fontSize: `${nameSize}px`, fontWeight: 900, color: textColor, fontFamily: "var(--font-archivo-black)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+                    <div style={{ fontSize: `${roleSize}px`, color: textColor, opacity: 0.55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.06em" }}>{member.role}</div>
                   </div>
                 </div>
               ))}

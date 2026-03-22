@@ -97,6 +97,7 @@ function BlockEditor({
   block: CustomBlock;
   onPatch: (patch: Partial<CustomBlock>) => void;
   onClose: () => void;
+  // NOTE: for events/pakdemic, changes go through onPatch({ blockEvents/blockPakText })
 }) {
   const [activeTab, setActiveTab] = React.useState<"inhoud" | "stijl" | "layout">("inhoud");
 
@@ -194,7 +195,88 @@ function BlockEditor({
               />
             </div>
 
-            {block.contentType !== "divider" && block.contentType !== "poster" && (
+            {/* ── Events block: row-based event editor ── */}
+            {block.contentType === "events" && (() => {
+              const evs = block.blockEvents ?? [];
+              const setEvs = (updated: typeof evs) => onPatch({ blockEvents: updated });
+              return (
+                <div className="space-y-2">
+                  <Label>Evenementen</Label>
+                  {evs.map((ev, idx) => (
+                    <div key={idx} className="border-2 border-gray-100 p-3 space-y-2 bg-gray-50">
+                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                        <div>
+                          <Label>Dag</Label>
+                          <input
+                            className={inputCls}
+                            value={ev.day}
+                            placeholder="XX"
+                            onChange={(e) => setEvs(evs.map((x, i) => i === idx ? { ...x, day: e.target.value } : x))}
+                          />
+                        </div>
+                        <div>
+                          <Label>Maand</Label>
+                          <input
+                            className={inputCls}
+                            value={ev.month}
+                            placeholder="MRT"
+                            onChange={(e) => setEvs(evs.map((x, i) => i === idx ? { ...x, month: e.target.value } : x))}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEvs(evs.filter((_, i) => i !== idx))}
+                          className="p-2 text-red-300 hover:text-red-500 mb-[2px]"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div>
+                        <Label>Eventnaam</Label>
+                        <input
+                          className={inputCls}
+                          value={ev.title}
+                          placeholder="Clubnight #01"
+                          onChange={(e) => setEvs(evs.map((x, i) => i === idx ? { ...x, title: e.target.value } : x))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Locatie & tijd</Label>
+                        <input
+                          className={inputCls}
+                          value={ev.detail}
+                          placeholder="locatie — aanvangstijd"
+                          onChange={(e) => setEvs(evs.map((x, i) => i === idx ? { ...x, detail: e.target.value } : x))}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setEvs([...evs, { day: "XX", month: "MRT", title: "", detail: "" }])}
+                    className="w-full py-2 border-2 border-dashed border-gray-200 text-gray-400 hover:border-cvo-black hover:text-cvo-black text-[10px] font-bold uppercase tracking-wider transition-colors font-archivo flex items-center justify-center gap-1"
+                  >
+                    <Plus size={12} /> Event toevoegen
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* ── Pakdemic block: inline text editor ── */}
+            {block.contentType === "pakdemic" && (
+              <div>
+                <Label>Jij aan het woord — tekst</Label>
+                <textarea
+                  className={textareaCls}
+                  rows={4}
+                  value={block.blockPakText ?? ""}
+                  placeholder="Heb jij iets te zeggen? Stuur ons een berichtje..."
+                  onChange={(e) => onPatch({ blockPakText: e.target.value })}
+                />
+              </div>
+            )}
+
+            {block.contentType !== "divider" && block.contentType !== "poster" && block.contentType !== "events" && block.contentType !== "pakdemic" && (
               <>
                 <div>
                   <Label>Body tekst</Label>
@@ -317,6 +399,30 @@ function BlockEditor({
         {/* ── STIJL TAB ── */}
         {activeTab === "stijl" && (
           <>
+            {/* Design variant picker — for events, pakdemic, crew, joinus */}
+            {(["events", "pakdemic", "crew", "joinus"] as const).includes(block.contentType as any) && (
+              <div>
+                <Label>Design variant (1–5)</Label>
+                <div className="grid grid-cols-5 gap-1">
+                  {[1, 2, 3, 4, 5].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => onPatch({ designVariant: v })}
+                      className={`py-2 text-[11px] font-bold font-archivo border-2 transition-colors ${
+                        (block.designVariant ?? 1) === v
+                          ? "bg-cvo-orange text-white border-cvo-orange"
+                          : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[8px] text-gray-400 font-archivo mt-1 italic">Wissel tussen 5 verschillende lay-outs voor dit bloktype.</p>
+              </div>
+            )}
+
             <div>
               <Label>Stijl preset</Label>
               <div className="flex gap-2 flex-wrap">
@@ -1069,10 +1175,17 @@ export default function EditorPanel({ content, onChange, selectedBlockId, onSele
         const shuffleCard = (rowIdx: number, cardIdx: number) => {
           const styleOptions: CustomBlock["style"][] = ["black", "orange", "mint", "cream"];
           const newStyle = styleOptions[Math.floor(Math.random() * styleOptions.length)];
+          const variantTypes = new Set(["events", "pakdemic", "crew", "joinus"]);
           patchRows(rows.map((r, ri) =>
             ri !== rowIdx ? r : {
               ...r,
-              cards: r.cards.map((c, ci) => ci !== cardIdx ? c : { ...c, style: newStyle }),
+              cards: r.cards.map((c, ci) => {
+                if (ci !== cardIdx) return c;
+                const hasVariants = variantTypes.has(c.contentType);
+                const currentVariant = c.designVariant ?? 1;
+                const nextVariant = hasVariants ? (currentVariant % 5) + 1 : currentVariant;
+                return { ...c, style: newStyle, designVariant: nextVariant };
+              }),
             }
           ));
         };

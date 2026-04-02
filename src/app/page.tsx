@@ -5,7 +5,7 @@ import MagazinePreview, { defaultContent, MagazineContent, CustomBlock, CustomRo
 import EditorPanel from "@/components/EditorPanel";
 import MinimaxChat from "@/components/MinimaxChat";
 import PasswordGate from "@/components/PasswordGate";
-import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut, Crosshair } from "lucide-react";
+import { Printer, Save, FolderOpen, Trash2, X, Plus, MessageCircle, ZoomIn, ZoomOut, Crosshair, Download, Upload } from "lucide-react";
 
 // ── Defaults for any missing CustomBlock fields ──────────────────────────────
 const BLOCK_DEFAULTS: Omit<CustomBlock, "id" | "headline" | "body"> = {
@@ -168,7 +168,42 @@ function loadEditions(): SavedEdition[] {
 }
 
 function saveEditions(editions: SavedEdition[]) {
-  safeSetItem(STORAGE_KEY, JSON.stringify(editions));
+  // Save slim version to localStorage (cache/fallback)
+  const slim = editions.map((e) => ({ ...e, content: slimForStorage(e.content) }));
+  safeSetItem(STORAGE_KEY, JSON.stringify(slim));
+}
+
+// ── Cloud persistence via Neon Postgres API ──
+async function fetchEditionsFromApi(): Promise<SavedEdition[]> {
+  try {
+    const res = await fetch("/api/editions");
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    return await res.json();
+  } catch {
+    return []; // fallback: return empty, localStorage data already loaded
+  }
+}
+
+async function saveEditionToApi(edition: SavedEdition): Promise<boolean> {
+  try {
+    const res = await fetch("/api/editions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(edition),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function deleteEditionFromApi(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/editions/${id}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 // ── Compress a screenshot PNG to JPEG before sending to the AI ─────────────
@@ -363,11 +398,20 @@ export default function Home() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Phase 1: instant load from localStorage cache
     setEditions(loadEditions());
     const last = localStorage.getItem("cvo_magazine_current");
     if (last) {
       try { setContent(JSON.parse(last)); } catch { /* ignore */ }
     }
+    // Phase 2: load from Neon API (overwrites localStorage data with full-quality DB data)
+    fetchEditionsFromApi().then((apiEditions) => {
+      if (apiEditions.length > 0) {
+        setEditions(apiEditions);
+        // Cache slim versions to localStorage
+        saveEditions(apiEditions);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -390,7 +434,8 @@ export default function Home() {
     };
     const updated = [newEdition, ...editions];
     setEditions(updated);
-    saveEditions(updated);
+    saveEditions(updated);           // localStorage (slim, fallback)
+    saveEditionToApi(newEdition);     // Neon DB (full content, fire-and-forget)
     setSaveName("");
     setShowSaveInput(false);
   };
@@ -403,12 +448,71 @@ export default function Home() {
   const handleDelete = (id: string) => {
     const updated = editions.filter((e) => e.id !== id);
     setEditions(updated);
-    saveEditions(updated);
+    saveEditions(updated);           // localStorage
+    deleteEditionFromApi(id);        // Neon DB (fire-and-forget)
   };
 
   const handleNew = () => {
     setContent({ ...defaultContent, edition: String(editions.length + 2).padStart(2, "0") });
     setShowManager(false);
+  };
+
+  // ── JSON Download / Import ──
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const downloadEditionAsJson = (edition: SavedEdition) => {
+    const json = JSON.stringify(edition, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cvo-editie-${edition.name.replace(/\s+/g, "-").toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadAllEditions = () => {
+    const json = JSON.stringify(editions, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cvo-alle-edities-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        const items: SavedEdition[] = Array.isArray(parsed) ? parsed : [parsed];
+        const valid = items.filter(
+          (it) => it && it.content && it.content.template && it.name
+        );
+        if (valid.length === 0) {
+          alert("Geen geldige edities gevonden in dit bestand.");
+          return;
+        }
+        // Merge — skip duplicates by id
+        const existingIds = new Set(editions.map((e) => e.id));
+        const newOnes = valid.filter((v) => !existingIds.has(v.id));
+        if (newOnes.length === 0) {
+          alert("Alle edities in dit bestand bestaan al.");
+          return;
+        }
+        const updated = [...newOnes, ...editions];
+        setEditions(updated);
+        saveEditions(updated);
+        // Also push to Neon DB
+        newOnes.forEach((ed) => saveEditionToApi(ed));
+        alert(`${newOnes.length} editie(s) geïmporteerd!`);
+      } catch {
+        alert("Kon bestand niet lezen — is het een geldig JSON bestand?");
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Stable callback — avoids re-attaching Escape listener on every render
@@ -636,9 +740,30 @@ export default function Home() {
           <div className="bg-cvo-cream border-[3px] border-cvo-black w-full max-w-[500px] max-h-[80vh] flex flex-col" style={{ boxShadow: "6px 6px 0 #1a1a1a" }}>
             <div className="bg-cvo-black text-cvo-cream px-5 py-3 flex justify-between items-center shrink-0">
               <span className="font-archivo-black text-[16px] uppercase tracking-tight">Mijn Edities</span>
-              <button onClick={() => setShowManager(false)} className="p-1 hover:text-cvo-orange transition-colors">
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-1">
+                {editions.length > 0 && (
+                  <button onClick={downloadAllEditions} className="p-1 hover:text-cvo-orange transition-colors" title="Download alle edities als JSON">
+                    <Download size={16} />
+                  </button>
+                )}
+                <button onClick={() => importInputRef.current?.click()} className="p-1 hover:text-cvo-orange transition-colors" title="Importeer editie(s) uit JSON">
+                  <Upload size={16} />
+                </button>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImportFile(f);
+                    e.target.value = "";
+                  }}
+                />
+                <button onClick={() => setShowManager(false)} className="p-1 hover:text-cvo-orange transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
             </div>
             <div className="px-5 py-3 border-b-[2px] border-cvo-black shrink-0">
               <button
@@ -665,6 +790,13 @@ export default function Home() {
                       className="shrink-0 bg-cvo-black text-cvo-cream px-3 py-1.5 font-archivo-black text-[10px] uppercase tracking-tight hover:bg-cvo-orange transition-colors"
                     >
                       Laden
+                    </button>
+                    <button
+                      onClick={() => downloadEditionAsJson(ed)}
+                      className="shrink-0 p-1.5 text-gray-400 hover:text-cvo-orange transition-colors"
+                      title="Download als JSON"
+                    >
+                      <Download size={14} />
                     </button>
                     <button
                       onClick={() => handleDelete(ed.id)}

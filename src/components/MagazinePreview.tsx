@@ -1838,7 +1838,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <section className="bg-cvo-mint border-r-[2px] border-cvo-black px-4 py-4 flex flex-col">
           <span className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
           <E value={content.buurtpostHeadline} onEdit={$("buurtpostHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-black mb-3" />
-          <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full aspect-[4/3] mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
+          <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
           <E value={content.buurtpostBody} onEdit={$("buurtpostBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-black flex-1" multiLine />
         </section>
 
@@ -1846,7 +1846,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <section className="bg-cvo-orange px-4 py-4 flex flex-col">
           <span className="inline-block bg-cvo-black text-cvo-orange text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
           <E value={content.clubHeuvelHeadline ?? "Clubnight Heuvel"} onEdit={$("clubHeuvelHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-cream mb-3" />
-          <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full aspect-[4/3] mb-3 flex-shrink-0" onUpload={$("clubHeuvelImage")} />
+          <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("clubHeuvelImage")} />
           <E value={content.clubHeuvelBody ?? ""} onEdit={$("clubHeuvelBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-cream flex-1" multiLine />
         </section>
       </div>
@@ -1860,7 +1860,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <div className="grid grid-cols-[1fr_1.4fr] gap-4">
           {/* Foto + uitleg */}
           <div className="flex flex-col gap-2">
-            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full aspect-[4/3]" onUpload={$("tienCodesImage")} />
+            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full h-[110px]" onUpload={$("tienCodesImage")} />
             <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
           </div>
           {/* Genummerde lijst van tien codes */}

@@ -132,6 +132,10 @@ function slimForStorage(content: MagazineContent): MagazineContent {
     mainFeatureImage: stripLarge(content.mainFeatureImage) ?? "",
     buurtpostImage:   stripLarge(content.buurtpostImage)   ?? "",
     flashbackImages:  (content.flashbackImages ?? []).map(img => stripLarge(img) ?? ""),
+    // Nieuwe sectie-afbeeldingen (v2)
+    joinTileImage:    stripLarge(content.joinTileImage),
+    clubHeuvelImage:  stripLarge(content.clubHeuvelImage),
+    tienCodesImage:   stripLarge(content.tienCodesImage),
     // Crew member avatars (field is `avatar`, not `photo`)
     crew: content.crew.map((c) => ({
       ...c,

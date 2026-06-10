@@ -86,6 +86,28 @@ export interface MagazineContent {
   pakDeMicText: string;
   sponsors: { name: string; logo?: string }[];
   companyDescription: string;
+
+  // ── Sectie 1 — "De club is van ONS" (crew/intro) ──
+  crewHeadline?: string;          // bewerkbare kop (was hardcoded "Meet The Crew")
+  joinTileImage?: string;         // uitnodigend fotovak — zelfportret nieuw lid
+  joinTileCaption?: string;       // bijschrift, bv. "Dit kan jij zijn. Word lid."
+
+  // ── Clubnight Heuvel (onderste rij, naast Clubnight IJpelaar) ──
+  clubHeuvelHeadline?: string;
+  clubHeuvelBody?: string;
+  clubHeuvelImage?: string;
+
+  // ── De tien codes (was "Pak de Mic") ──
+  tienCodesEyebrow?: string;      // kleine kop bovenaan, bv. "Onze filosofie"
+  tienCodesHeadline?: string;     // bv. "De tien codes"
+  tienCodesIntro?: string;        // uitleg bij de codes
+  tienCodesImage?: string;        // foto bij de codes
+  tienCodes?: string[];           // de tien codes (genummerde lijst)
+
+  // ── Vind ons — social media ──
+  socialsHeadline?: string;       // bv. "Vind ons"
+  socials?: { platform: "instagram" | "youtube" | "email"; label: string; url: string }[];
+
   customBlocks: CustomBlock[];
   customRows: CustomRow[];
   customPadding: number;   // px padding around the custom template canvas (0–40)
@@ -135,6 +157,32 @@ export const defaultContent: MagazineContent = {
     { name: "Stakeholder 4" },
   ],
   companyDescription: "CLUBvanONS is een urban living lab in Breda. Wij verbinden mensen, culturen en wijken door middel van kunst, muziek en community.",
+
+  // Sectie 1
+  crewHeadline: "De Club Is Van ONS",
+  joinTileImage: "",
+  joinTileCaption: "Dit kan jij zijn. Word lid.",
+
+  // Clubnight Heuvel
+  clubHeuvelHeadline: "Clubnight Heuvel",
+  clubHeuvelBody: "",
+  clubHeuvelImage: "",
+
+  // De tien codes
+  tienCodesEyebrow: "Onze filosofie",
+  tienCodesHeadline: "De Tien Codes",
+  tienCodesIntro: "",
+  tienCodesImage: "",
+  tienCodes: ["", "", "", "", "", "", "", "", "", ""],
+
+  // Vind ons
+  socialsHeadline: "Vind Ons",
+  socials: [
+    { platform: "instagram", label: "@clubvanons", url: "https://instagram.com/clubvanons" },
+    { platform: "youtube", label: "CLUBvanONS", url: "https://youtube.com/@clubvanons" },
+    { platform: "email", label: "stefanie@urbanlivinglabbreda.nl", url: "mailto:stefanie@urbanlivinglabbreda.nl" },
+  ],
+
   customBlocks: [],
   customRows: [],
   customPadding: 0,
@@ -228,7 +276,20 @@ function h(c: MagazineContent, ed?: OnEdit) {
     name: ed ? (v: string) => ed({ sponsors: c.sponsors.map((s, j) => j === i ? { ...s, name: v } : s) }) : undefined,
     logo: ed ? (v: string) => ed({ sponsors: c.sponsors.map((s, j) => j === i ? { ...s, logo: v } : s) }) : undefined,
   });
-  return { $, $fi, $cr, $ev, $sp };
+  // De tien codes — bewerk losse code-regel i
+  const $tc = (i: number) =>
+    ed ? (v: string) => {
+      const list = [...(c.tienCodes ?? [])];
+      while (list.length <= i) list.push("");
+      list[i] = v;
+      ed({ tienCodes: list });
+    } : undefined;
+  // Socials — bewerk label of url van link i
+  const $so = (i: number) => ({
+    label: ed ? (v: string) => ed({ socials: (c.socials ?? []).map((s, j) => j === i ? { ...s, label: v } : s) }) : undefined,
+    url:   ed ? (v: string) => ed({ socials: (c.socials ?? []).map((s, j) => j === i ? { ...s, url: v } : s) }) : undefined,
+  });
+  return { $, $fi, $cr, $ev, $sp, $tc, $so };
 }
 
 // ── Image compression — resize to maxPx on longest side, encode as JPEG ──
@@ -301,6 +362,69 @@ function CrewAvatar({ src, onUpload, bg = "bg-gray-100", border = "border-cvo-bl
         </>
       )}
     </div>
+  );
+}
+
+// ── Uitnodigend fotovak voor een nieuw lid (circulair, "Word lid") ──
+function InviteTile({ src, onUpload }: { src?: string; onUpload?: (v: string) => void }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  return (
+    <div
+      className={cn(
+        "relative group w-full aspect-square rounded-full overflow-hidden border-[2px] border-dashed border-cvo-orange flex items-center justify-center",
+        src ? "" : "bg-cvo-orange/10",
+        onUpload ? "cursor-pointer" : "",
+      )}
+      onClick={() => onUpload && inputRef.current?.click()}
+    >
+      {src ? (
+        <img src={src} className="w-full h-full object-cover" alt="nieuw lid" />
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-[1px] text-cvo-orange leading-none">
+          <span className="text-[18px] leading-none font-archivo-black">+</span>
+          <span className="text-[5px] font-bold uppercase tracking-[0.08em] font-archivo">Word lid</span>
+        </div>
+      )}
+      {onUpload && (
+        <>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center pointer-events-none">
+            <span className="opacity-0 group-hover:opacity-100 text-white text-[9px] font-bold transition-opacity">{src ? "Wijzig" : "↑"}</span>
+          </div>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+            const f = e.target.files?.[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = async () => { onUpload(await compressImage(r.result as string)); };
+            r.readAsDataURL(f); e.target.value = "";
+          }} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Social-media iconen (inline SVG, erven currentColor) ──
+function SocialIcon({ platform, className }: { platform: "instagram" | "youtube" | "email"; className?: string }) {
+  if (platform === "instagram") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+      </svg>
+    );
+  }
+  if (platform === "youtube") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6z" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 6L2 7" />
+    </svg>
   );
 }
 
@@ -1645,29 +1769,39 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
   );
 }
 
+// Social-tegel huisstijlkleuren (Vind ons-sectie)
+const SOCIAL_TILE: Record<string, { name: string; bg: string; fg: string; chip: string }> = {
+  instagram: { name: "Instagram", bg: "bg-cvo-orange", fg: "text-cvo-cream", chip: "border-cvo-cream text-cvo-cream" },
+  youtube:   { name: "YouTube",   bg: "bg-cvo-black",  fg: "text-cvo-cream", chip: "border-cvo-orange text-cvo-orange" },
+  email:     { name: "E-mail",    bg: "bg-cvo-mint",   fg: "text-cvo-black", chip: "border-cvo-black text-cvo-black" },
+};
+
 // ════════════════════════════════════════
 //  STANDARD TEMPLATE
 // ════════════════════════════════════════
 function renderStandard(content: MagazineContent, ed?: OnEdit) {
-  const { $, $fi, $cr, $ev } = h(content, ed);
+  const { $, $fi, $cr, $tc, $so } = h(content, ed);
   return (
     <>
       {/* ── ROW 1: Meet the Crew | Terugblik ── */}
       <div className="flex border-b-[2px] border-cvo-black">
 
-        {/* Meet the Crew */}
+        {/* De club is van ONS */}
         <section className="w-[41%] shrink-0 border-r-[2px] border-cvo-black px-4 py-4">
           <span className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo">Wie zijn wij</span>
-          <h2 className="font-archivo-black text-[34px] leading-[0.88] uppercase text-cvo-black mb-3">
-            Meet The<br /><span className="bg-cvo-orange text-cvo-cream px-[6px]">Crew</span>
-          </h2>
-          <div className="flex gap-[6px] mb-3">
+          <E value={content.crewHeadline ?? "De Club Is Van ONS"} onEdit={$("crewHeadline")} as="h2" className="font-archivo-black text-[30px] leading-[0.9] uppercase text-cvo-black mb-3" />
+          <div className="flex gap-[6px] mb-3 items-start">
             {content.crew.slice(0, 5).map((m, i) => (
               <div key={i} className="flex flex-col items-center gap-[4px] flex-1 min-w-0">
                 <CrewAvatar src={m.avatar} onUpload={$cr(i).avatar} />
                 <E value={m.name} onEdit={$cr(i).name} className="text-[7px] font-bold uppercase tracking-tight text-cvo-black text-center font-archivo leading-[1.2] w-full truncate" />
               </div>
             ))}
+            {/* Uitnodigend fotovak — nieuw lid uit de buurt */}
+            <div className="flex flex-col items-center gap-[4px] flex-1 min-w-0">
+              <InviteTile src={content.joinTileImage} onUpload={$("joinTileImage")} />
+              <E value={content.joinTileCaption ?? "Dit kan jij zijn. Word lid."} onEdit={$("joinTileCaption")} className="text-[7px] font-bold uppercase tracking-tight text-cvo-orange text-center font-archivo leading-[1.2] w-full" />
+            </div>
           </div>
           <E value={content.crewTeaser} onEdit={$("crewTeaser")} as="p" className="text-[10px] leading-[1.65] font-archivo text-gray-700" multiLine />
         </section>
@@ -1698,55 +1832,72 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* ── ROW 3: Buurtpost | Join Ons | Pak de Mic ── */}
-      <div className="grid grid-cols-[1fr_2fr_1.5fr]">
-        {/* Buurtpost */}
-        <section className="bg-cvo-mint border-r-[2px] border-cvo-black px-3 py-4 flex flex-col">
-          <span className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Buurtpost</span>
-          <E value={content.buurtpostHeadline} onEdit={$("buurtpostHeadline")} as="h3" className="font-archivo-black text-[24px] leading-[0.9] uppercase text-cvo-black mb-3" />
-          <FotoSlot src={content.buurtpostImage} label="foto wijk" className="w-full aspect-square mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
+      {/* ── ROW 3: Clubnight IJpelaar | Clubnight Heuvel ── */}
+      <div className="grid grid-cols-2 border-b-[2px] border-cvo-black">
+        {/* Clubnight IJpelaar */}
+        <section className="bg-cvo-mint border-r-[2px] border-cvo-black px-4 py-4 flex flex-col">
+          <span className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
+          <E value={content.buurtpostHeadline} onEdit={$("buurtpostHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-black mb-3" />
+          <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full aspect-[4/3] mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
           <E value={content.buurtpostBody} onEdit={$("buurtpostBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-black flex-1" multiLine />
         </section>
 
-        {/* Join Ons */}
-        <section className="bg-cvo-orange border-r-[2px] border-cvo-black flex flex-col">
-          <div className="bg-cvo-black px-4 py-[6px] flex justify-between items-center">
-            <span className="text-[8px] font-bold uppercase tracking-[0.22em] text-cvo-orange font-archivo">De Nights — Agenda</span>
-            <span className="text-cvo-cream text-[11px] font-archivo-black tracking-tight">↓ See you there</span>
-          </div>
-          <div className="px-4 py-3 flex-1 flex flex-col">
-            <h2 className="font-archivo-black text-[80px] leading-[0.82] uppercase text-cvo-black mb-4 tracking-[-0.02em]">
-              Join<br /><span className="text-cvo-cream" style={{ WebkitTextStroke: "2px #1a1a1a" }}>Ons</span>
-            </h2>
-            <div className="flex flex-col gap-2 flex-1">
-              {content.events.map((ev, i) => (
-                <div key={i} className="flex items-stretch bg-cvo-cream border-[2px] border-cvo-black" style={{ boxShadow: "3px 3px 0 #1a1a1a" }}>
-                  <div className="bg-cvo-black text-cvo-orange flex flex-col items-center justify-center px-3 py-2 min-w-[50px] shrink-0">
-                    <E value={ev.day} onEdit={$ev(i).day} className="font-archivo-black text-[20px] leading-none" />
-                    <E value={ev.month} onEdit={$ev(i).month} className="text-[7px] font-bold uppercase tracking-[0.08em] text-cvo-cream font-archivo" />
-                  </div>
-                  <div className="flex-1 px-3 py-2 min-w-0">
-                    <E value={ev.title} onEdit={$ev(i).title} className="text-[11px] font-bold uppercase tracking-[0.03em] text-cvo-black font-archivo block truncate" />
-                    <E value={ev.detail} onEdit={$ev(i).detail} className="text-[9px] text-gray-600 font-archivo truncate block" />
-                  </div>
-                  <div className="flex items-center pr-3 shrink-0">
-                    <span className="bg-cvo-orange text-cvo-black text-[7.5px] font-bold uppercase tracking-[0.1em] px-2 py-[4px] border-[2px] border-cvo-black font-archivo">Free</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Pak de Mic */}
-        <section className="bg-cvo-black px-4 py-4 flex flex-col">
-          <span className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-500 mb-2 block font-archivo">Jij aan het woord</span>
-          <h2 className="font-archivo-black text-[46px] leading-[0.88] uppercase text-cvo-cream mb-1">Pak<br />De<br /><span className="text-cvo-orange">Mic</span></h2>
-          <span className="block mb-3 text-cvo-orange text-[13px] font-archivo" style={{ fontStyle: "italic" }}>Jij bent de wijk.</span>
-          <E value={content.pakDeMicText} onEdit={$("pakDeMicText")} as="p" className="text-[9.5px] leading-[1.65] text-gray-400 font-archivo flex-1" multiLine />
-          <span className="inline-block mt-3 bg-cvo-orange text-cvo-black text-[8px] font-bold uppercase tracking-[0.14em] px-3 py-[5px] border-[2px] border-cvo-orange font-archivo self-start">→ Stuur je bericht in</span>
+        {/* Clubnight Heuvel */}
+        <section className="bg-cvo-orange px-4 py-4 flex flex-col">
+          <span className="inline-block bg-cvo-black text-cvo-orange text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
+          <E value={content.clubHeuvelHeadline ?? "Clubnight Heuvel"} onEdit={$("clubHeuvelHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-cream mb-3" />
+          <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full aspect-[4/3] mb-3 flex-shrink-0" onUpload={$("clubHeuvelImage")} />
+          <E value={content.clubHeuvelBody ?? ""} onEdit={$("clubHeuvelBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-cream flex-1" multiLine />
         </section>
       </div>
+
+      {/* ── ROW 4: De tien codes (was Pak de Mic) ── */}
+      <section className="bg-cvo-black px-5 py-4 border-b-[2px] border-cvo-black">
+        <span className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-cvo-orange mb-1 block font-archivo">
+          <E value={content.tienCodesEyebrow ?? "Onze filosofie"} onEdit={$("tienCodesEyebrow")} />
+        </span>
+        <E value={content.tienCodesHeadline ?? "De Tien Codes"} onEdit={$("tienCodesHeadline")} as="h2" className="font-archivo-black text-[40px] leading-[0.9] uppercase text-cvo-cream mb-3" />
+        <div className="grid grid-cols-[1fr_1.4fr] gap-4">
+          {/* Foto + uitleg */}
+          <div className="flex flex-col gap-2">
+            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full aspect-[4/3]" onUpload={$("tienCodesImage")} />
+            <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
+          </div>
+          {/* Genummerde lijst van tien codes */}
+          <ol className="grid grid-cols-2 gap-x-4 gap-y-1.5 content-start">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <li key={i} className="flex items-baseline gap-2">
+                <span className="font-archivo-black text-cvo-orange text-[14px] leading-none w-[18px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <E value={(content.tienCodes ?? [])[i] ?? ""} onEdit={$tc(i)} className="text-[9.5px] leading-[1.4] text-cvo-cream font-archivo flex-1" />
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ── ROW 5: Vind ons — social media ── */}
+      <section className="px-5 py-4">
+        <span className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2 block font-archivo">Volg de club</span>
+        <E value={content.socialsHeadline ?? "Vind Ons"} onEdit={$("socialsHeadline")} as="h3" className="font-archivo-black text-[24px] leading-[0.9] uppercase text-cvo-black mb-3" />
+        <div className="grid grid-cols-3 gap-3">
+          {(content.socials ?? []).map((s, i) => {
+            const tile = SOCIAL_TILE[s.platform] ?? SOCIAL_TILE.email;
+            return (
+              <div key={i} className={`flex flex-col gap-2 border-[2px] border-cvo-black p-3 ${tile.bg}`} style={{ boxShadow: "3px 3px 0 #1a1a1a" }}>
+                <div className="flex items-center justify-between">
+                  <SocialIcon platform={s.platform} className={`w-5 h-5 ${tile.fg}`} />
+                  <a href={s.url || "#"} target="_blank" rel="noopener noreferrer" className={`text-[8px] font-bold uppercase tracking-[0.12em] font-archivo px-2 py-[3px] border-[2px] hover:opacity-80 transition-opacity ${tile.chip}`}>
+                    Open ↗
+                  </a>
+                </div>
+                <span className={`text-[7px] font-bold uppercase tracking-[0.18em] font-archivo opacity-70 ${tile.fg}`}>{tile.name}</span>
+                <E value={s.label} onEdit={$so(i).label} className={`text-[11px] font-archivo-black leading-tight break-words ${tile.fg}`} />
+                <E value={s.url} onEdit={$so(i).url} className={`text-[7px] font-archivo opacity-60 break-all ${tile.fg}`} />
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </>
   );
 }

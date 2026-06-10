@@ -103,10 +103,11 @@ export interface MagazineContent {
   tienCodesIntro?: string;        // uitleg bij de codes
   tienCodesImage?: string;        // foto bij de codes
   tienCodes?: string[];           // de tien codes (genummerde lijst)
+  tienCodesOutro?: string;        // afsluitende tekst onder de codes
 
   // ── Vind ons — social media ──
   socialsHeadline?: string;       // bv. "Vind ons"
-  socials?: { platform: "instagram" | "youtube" | "email"; label: string; url: string }[];
+  socials?: { platform: "instagram" | "youtube" | "email" | "website"; label: string; url: string }[];
 
   customBlocks: CustomBlock[];
   customRows: CustomRow[];
@@ -174,13 +175,14 @@ export const defaultContent: MagazineContent = {
   tienCodesIntro: "",
   tienCodesImage: "",
   tienCodes: ["", "", "", "", "", "", "", "", "", ""],
+  tienCodesOutro: "",
 
   // Vind ons
   socialsHeadline: "Vind Ons",
   socials: [
-    { platform: "instagram", label: "@clubvanons", url: "https://instagram.com/clubvanons" },
-    { platform: "youtube", label: "CLUBvanONS", url: "https://youtube.com/@clubvanons" },
-    { platform: "email", label: "stefanie@urbanlivinglabbreda.nl", url: "mailto:stefanie@urbanlivinglabbreda.nl" },
+    { platform: "instagram", label: "@clubvanonsbreda", url: "https://www.instagram.com/clubvanonsbreda/" },
+    { platform: "youtube", label: "CLUBvanONS", url: "https://www.youtube.com/@CLUBvanONSBreda" },
+    { platform: "website", label: "urbanlivinglabbreda.nl/clubvanons", url: "https://urbanlivinglabbreda.nl/clubvanons/" },
   ],
 
   customBlocks: [],
@@ -403,7 +405,7 @@ function InviteTile({ src, onUpload }: { src?: string; onUpload?: (v: string) =>
 }
 
 // ── Social-media iconen (inline SVG, erven currentColor) ──
-function SocialIcon({ platform, className }: { platform: "instagram" | "youtube" | "email"; className?: string }) {
+function SocialIcon({ platform, className }: { platform: "instagram" | "youtube" | "email" | "website"; className?: string }) {
   if (platform === "instagram") {
     return (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -417,6 +419,15 @@ function SocialIcon({ platform, className }: { platform: "instagram" | "youtube"
     return (
       <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6z" />
+      </svg>
+    );
+  }
+  if (platform === "website") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     );
   }
@@ -1774,6 +1785,7 @@ const SOCIAL_TILE: Record<string, { name: string; bg: string; fg: string; chip: 
   instagram: { name: "Instagram", bg: "bg-cvo-orange", fg: "text-cvo-cream", chip: "border-cvo-cream text-cvo-cream" },
   youtube:   { name: "YouTube",   bg: "bg-cvo-black",  fg: "text-cvo-cream", chip: "border-cvo-orange text-cvo-orange" },
   email:     { name: "E-mail",    bg: "bg-cvo-mint",   fg: "text-cvo-black", chip: "border-cvo-black text-cvo-black" },
+  website:   { name: "Website",   bg: "bg-cvo-mint",   fg: "text-cvo-black", chip: "border-cvo-black text-cvo-black" },
 };
 
 // ════════════════════════════════════════
@@ -1873,6 +1885,14 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
             ))}
           </ol>
         </div>
+        {/* Afsluitende tekst onder de codes */}
+        <E
+          value={content.tienCodesOutro ?? (ed ? "Klik om tekst toe te voegen…" : "")}
+          onEdit={$("tienCodesOutro")}
+          as="p"
+          className={`text-[9.5px] leading-[1.65] font-archivo mt-3 pt-3 border-t-[1px] border-cvo-cream/20 ${content.tienCodesOutro ? "text-gray-300" : "text-gray-500 italic"}`}
+          multiLine
+        />
       </section>
 
       {/* ── ROW 5: Vind ons — social media ── */}

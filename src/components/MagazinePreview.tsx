@@ -107,7 +107,16 @@ export interface MagazineContent {
 
   // ── Vind ons — social media ──
   socialsHeadline?: string;       // bv. "Vind ons"
+  socialsEyebrow?: string;        // kleine kop boven "Vind ons"
   socials?: { platform: "instagram" | "youtube" | "email" | "website"; label: string; url: string }[];
+
+  // ── Kleine sectie-labels (eyebrows / badges) — allemaal bewerkbaar ──
+  crewEyebrow?: string;           // "Wie zijn wij"
+  flashbackEyebrow?: string;      // "Terugblik"
+  mainFeatureEyebrow?: string;    // "Op straat"
+  clubIJpelaarBadge?: string;     // "Clubnight" (IJpelaar)
+  clubHeuvelBadge?: string;       // "Clubnight" (Heuvel)
+  tagline?: string;               // masthead "Het blad van de buurt"
 
   customBlocks: CustomBlock[];
   customRows: CustomRow[];
@@ -179,6 +188,14 @@ export const defaultContent: MagazineContent = {
 
   // Vind ons
   socialsHeadline: "Vind Ons",
+  socialsEyebrow: "Volg de club",
+  // Kleine sectie-labels
+  crewEyebrow: "Wie zijn wij",
+  flashbackEyebrow: "Terugblik",
+  mainFeatureEyebrow: "Op straat",
+  clubIJpelaarBadge: "Clubnight",
+  clubHeuvelBadge: "Clubnight",
+  tagline: "Het blad van de buurt",
   socials: [
     { platform: "instagram", label: "@clubvanonsbreda", url: "https://www.instagram.com/clubvanonsbreda/" },
     { platform: "youtube", label: "CLUBvanONS", url: "https://www.youtube.com/@CLUBvanONSBreda" },
@@ -1700,7 +1717,7 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
           </div>
         </div>
         <div className="bg-cvo-black text-cvo-cream px-5 py-[5px] flex justify-between items-center text-[8.5px] font-bold uppercase tracking-[0.2em] font-archivo">
-          <span>Het blad van de buurt</span>
+          <E value={content.tagline ?? "Het blad van de buurt"} onEdit={onEdit ? v => onEdit({ tagline: v }) : undefined} />
           <E value={content.bannerText} onEdit={onEdit ? v => onEdit({ bannerText: v }) : undefined} className="opacity-55" />
         </div>
       </header>
@@ -1800,7 +1817,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
 
         {/* De club is van ONS */}
         <section className="w-[41%] shrink-0 border-r-[2px] border-cvo-black px-4 py-4">
-          <span className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo">Wie zijn wij</span>
+          <E value={content.crewEyebrow ?? "Wie zijn wij"} onEdit={$("crewEyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
           <E value={content.crewHeadline ?? "De Club Is Van ONS"} onEdit={$("crewHeadline")} as="h2" className="font-archivo-black text-[30px] leading-[0.9] uppercase text-cvo-black mb-3" />
           <div className="flex gap-[6px] mb-3 items-start">
             {content.crew.slice(0, 5).map((m, i) => (
@@ -1820,7 +1837,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
 
         {/* Terugblik */}
         <section className="flex-1 min-w-0 px-4 py-4">
-          <span className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo">Terugblik</span>
+          <E value={content.flashbackEyebrow ?? "Terugblik"} onEdit={$("flashbackEyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
           <E value={content.flashbackHeadline} onEdit={$("flashbackHeadline")} as="h2" className="font-archivo-black text-[34px] leading-[0.88] uppercase text-cvo-black mb-3" />
           <div className="grid grid-cols-3 gap-[6px] mb-2">
             {[0, 1, 2].map((i) => (
@@ -1836,7 +1853,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
       <section className="border-b-[2px] border-cvo-black">
         <div className="grid grid-cols-[3fr_2fr]">
           <div className="px-4 py-4 border-r-[2px] border-cvo-black">
-            <span className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo">Op straat</span>
+            <E value={content.mainFeatureEyebrow ?? "Op straat"} onEdit={$("mainFeatureEyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
             <E value={content.mainFeatureHeadline} onEdit={$("mainFeatureHeadline")} as="h2" className="font-archivo-black text-[44px] leading-[0.88] uppercase text-cvo-black mb-3" />
             <E value={content.mainFeatureBody} onEdit={$("mainFeatureBody")} as="p" className="text-[10.5px] leading-[1.7] font-archivo text-gray-700" multiLine />
           </div>
@@ -1848,7 +1865,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
       <div className="grid grid-cols-2 border-b-[2px] border-cvo-black">
         {/* Clubnight IJpelaar */}
         <section className="bg-cvo-mint border-r-[2px] border-cvo-black px-4 py-4 flex flex-col">
-          <span className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
+          <E value={content.clubIJpelaarBadge ?? "Clubnight"} onEdit={$("clubIJpelaarBadge")} className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start" />
           <E value={content.buurtpostHeadline} onEdit={$("buurtpostHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-black mb-3" />
           <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
           <E value={content.buurtpostBody} onEdit={$("buurtpostBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-black flex-1" multiLine />
@@ -1856,7 +1873,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
 
         {/* Clubnight Heuvel */}
         <section className="bg-cvo-orange px-4 py-4 flex flex-col">
-          <span className="inline-block bg-cvo-black text-cvo-orange text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start">Clubnight</span>
+          <E value={content.clubHeuvelBadge ?? "Clubnight"} onEdit={$("clubHeuvelBadge")} className="inline-block bg-cvo-black text-cvo-orange text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start" />
           <E value={content.clubHeuvelHeadline ?? "Clubnight Heuvel"} onEdit={$("clubHeuvelHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-cream mb-3" />
           <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("clubHeuvelImage")} />
           <E value={content.clubHeuvelBody ?? ""} onEdit={$("clubHeuvelBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-cream flex-1" multiLine />
@@ -1897,7 +1914,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
 
       {/* ── ROW 5: Vind ons — social media ── */}
       <section className="px-5 py-4">
-        <span className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2 block font-archivo">Volg de club</span>
+        <E value={content.socialsEyebrow ?? "Volg de club"} onEdit={$("socialsEyebrow")} className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2 block font-archivo" />
         <E value={content.socialsHeadline ?? "Vind Ons"} onEdit={$("socialsHeadline")} as="h3" className="font-archivo-black text-[24px] leading-[0.9] uppercase text-cvo-black mb-3" />
         <div className="grid grid-cols-3 gap-3">
           {(content.socials ?? []).map((s, i) => {

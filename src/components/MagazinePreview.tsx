@@ -1924,10 +1924,10 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* Statement-band (oranje) — compact accent, geen vaste paginavuller meer */}
+      {/* Statement-band (oranje) — vult de stabiele onderkant van pagina 1 */}
       {content.statementA ? (
         <StatementBand quote={content.statementA} sub={content.statementASub}
-          onQuote={$("statementA")} onSub={$("statementASub")} minH={90} />
+          onQuote={$("statementA")} onSub={$("statementASub")} minH={165} />
       ) : null}
 
       {/* ── ROW 3: Clubnight IJpelaar | Clubnight Heuvel ── */}

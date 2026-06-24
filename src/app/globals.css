@@ -72,12 +72,13 @@ body {
   /* ── Zoom-wrapper: schermzoom resetten, volle A4-breedte, natuurlijke hoogte ── */
   /* Zo print het magazine altijd op 100% schaal, ongeacht de zoom in de editor. */
   #magazine-zoom-wrapper {
-    zoom: 1 !important;               /* cancel screen zoom */
+    /* schermzoom vervangen door de per-editie print-schaal (fit op A4) */
+    zoom: var(--cvo-print-scale, 1) !important;
     position: static !important;
     width: 210mm !important;
     height: auto !important;
     max-width: none !important;
-    margin: 0 !important;
+    margin: 0 auto !important;        /* gecentreerd als er <100% geschaald wordt */
     padding: 0 !important;
     overflow: visible !important;
   }

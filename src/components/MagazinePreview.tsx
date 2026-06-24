@@ -137,6 +137,7 @@ export interface MagazineContent {
   customPadding: number;   // px padding around the custom template canvas (0–40)
   customGap: number;       // px gap between blocks (0–16)
   customLogo: string;      // data URL or HTTPS URL for custom company logo (empty = use default CVO logo)
+  printScale?: number;     // print/A4-schaal in % (50–100) om een editie passend te maken; default 100
 }
 
 export const defaultContent: MagazineContent = {
@@ -234,6 +235,7 @@ export const defaultContent: MagazineContent = {
   customPadding: 0,
   customGap: 0,
   customLogo: "",
+  printScale: 100,
 };
 
 function CvoLogo({ className }: { className?: string }) {
@@ -1952,7 +1954,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <div className="grid grid-cols-[3fr_2fr]">
           <div className="px-4 py-4 border-r-[2px] border-cvo-black">
             <E value={content.feature2Eyebrow ?? "In de wijk"} onEdit={$("feature2Eyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
-            <E value={content.feature2Headline ?? "Kop hier"} onEdit={$("feature2Headline")} as="h2" className="font-archivo-black text-[44px] leading-[0.88] uppercase text-cvo-black mb-3" />
+            <E value={content.feature2Headline ?? "Kop hier"} onEdit={$("feature2Headline")} as="h2" className="font-archivo-black text-[24px] leading-[0.95] uppercase text-cvo-black mb-2" />
             <E value={content.feature2Body ?? ""} onEdit={$("feature2Body")} as="p" className="text-[10.5px] leading-[1.7] font-archivo text-gray-700" multiLine />
           </div>
           <FotoSlot src={content.feature2Image} label="foto" className="w-full min-h-[180px]" onUpload={$("feature2Image")} />

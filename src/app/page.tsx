@@ -666,6 +666,33 @@ export default function Home() {
                 {p}%
               </button>
             ))}
+            {/* Print-schaal (fit op A4) — per editie, schaalt de hele pagina bij printen */}
+            <div className="flex items-center gap-1.5 border-l-2 border-gray-200 pl-2">
+              <span className="text-[9px] uppercase font-archivo-black text-gray-400 tracking-widest" title="Schaal voor printen / A4-export — verklein tot alles op de pagina's past">Print</span>
+              <div className="flex items-center border-[2px] border-gray-300 overflow-hidden">
+                <button
+                  onClick={() => setContent(c => ({ ...c, printScale: Math.max(50, (c.printScale ?? 100) - 5) }))}
+                  className="px-2 py-1 hover:bg-gray-100 transition-colors text-gray-600 border-r border-gray-300"
+                  title="Print kleiner (−5%) — meer past op de pagina"
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <button
+                  onClick={() => setContent(c => ({ ...c, printScale: 100 }))}
+                  className="px-2 py-1 font-archivo-black text-[11px] text-gray-700 hover:bg-gray-100 transition-colors min-w-[44px] text-center border-r border-gray-300"
+                  title="Terug naar 100%"
+                >
+                  {content.printScale ?? 100}%
+                </button>
+                <button
+                  onClick={() => setContent(c => ({ ...c, printScale: Math.min(100, (c.printScale ?? 100) + 5) }))}
+                  className="px-2 py-1 hover:bg-gray-100 transition-colors text-gray-600"
+                  title="Print groter (+5%)"
+                >
+                  <ZoomIn size={14} />
+                </button>
+              </div>
+            </div>
             {/* AI chat toggle in toolbar too */}
             <div className="ml-auto">
               <button
@@ -688,7 +715,9 @@ export default function Home() {
             width: 794,      // Fixed A4 pixel width — never squishes or wraps
             margin: "0 auto",
             zoom: zoom / 100,
-          }}
+            // Print/A4-schaal: in @media print wordt deze var als zoom toegepast
+            ["--cvo-print-scale" as string]: String((content.printScale ?? 100) / 100),
+          } as React.CSSProperties}
         >
           <MagazinePreview
             content={content}

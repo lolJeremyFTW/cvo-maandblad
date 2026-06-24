@@ -2002,8 +2002,8 @@ function renderStandardPaged(
         <div className="grid grid-cols-[3fr_2fr]">
           <div className="px-4 py-4 border-r-[2px] border-cvo-black">
             <E value={content.feature2Eyebrow ?? "In de wijk"} onEdit={$("feature2Eyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
-            <E value={content.feature2Headline ?? "Kop hier"} onEdit={$("feature2Headline")} as="h2" className="font-archivo-black text-[24px] leading-[0.95] uppercase text-cvo-black mb-2" />
-            <E value={content.feature2Body ?? ""} onEdit={$("feature2Body")} as="p" className="text-[10.5px] leading-[1.7] font-archivo text-gray-700" multiLine />
+            <E value={content.feature2Headline || (ed ? "Kop hier" : "")} onEdit={$("feature2Headline")} as="h2" className={`font-archivo-black text-[24px] leading-[0.95] uppercase mb-2 ${content.feature2Headline ? "text-cvo-black" : "text-gray-300"}`} />
+            <E value={content.feature2Body || (ed ? "Klik hier om tekst toe te voegen…" : "")} onEdit={$("feature2Body")} as="p" className={`text-[10.5px] leading-[1.7] font-archivo ${content.feature2Body ? "text-gray-700" : "text-gray-300 italic"}`} multiLine />
           </div>
           <FotoSlot src={content.feature2Image} label="foto" className="w-full min-h-[180px]" onUpload={$("feature2Image")} />
         </div>

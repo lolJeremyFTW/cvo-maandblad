@@ -1728,21 +1728,17 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
   const scheme = COLOR_SCHEMES[content.logoColor] ?? COLOR_SCHEMES.Orange;
   const atTop = content.logoPosition === "Top";
 
-  return (
-    <div
-      id="magazine"
-      className="w-full max-w-[794px] mx-auto bg-cvo-cream border-[3px] border-cvo-black flex flex-col font-archivo overflow-hidden"
-      style={{ boxShadow: "6px 6px 0 #1a1a1a", ...scheme } as React.CSSProperties}
-    >
-      {/* ── LOGO TOP (optional) ── */}
-      {atTop && (
-        <div className="border-b-[3px] border-cvo-black overflow-hidden">
-          <LogoArea content={content} />
-        </div>
-      )}
+  const logoTop = atTop ? (
+    <div className="border-b-[3px] border-cvo-black overflow-hidden shrink-0">
+      <LogoArea content={content} />
+    </div>
+  ) : null;
 
+  const masthead = (
+    <>
+      {logoTop}
       {/* ── MASTHEAD ── */}
-      <header className="border-b-[3px] border-cvo-black">
+      <header className="border-b-[3px] border-cvo-black shrink-0">
         <div className="px-5 pt-3 pb-2">
           <div className="flex justify-between items-end gap-2">
             <div className="text-[9.5px] font-bold uppercase tracking-[0.1em] leading-[1.9] text-cvo-black font-archivo shrink-0">
@@ -1763,20 +1759,11 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
           <E value={content.bannerText} onEdit={onEdit ? v => onEdit({ bannerText: v }) : undefined} className="opacity-55" />
         </div>
       </header>
+    </>
+  );
 
-      {/* ── CONTENT ── */}
-      <div className="flex-1">
-        {content.template === "Standard" && renderStandard(content, onEdit)}
-        {content.template === "Collage" && renderCollage(content, onEdit)}
-        {content.template === "Brutalist" && renderBrutalist(content, onEdit)}
-        {content.template === "Street" && renderStreet(content, onEdit)}
-        {content.template === "Feature" && renderFeature(content, onEdit)}
-        {content.template === "Minimalist" && renderMinimalist(content, onEdit)}
-        {content.template === "Custom" && renderCustom(content, onEdit, selectedBlockId, onSelectBlock)}
-      </div>
-
-      {/* ── FOOTER ── */}
-      <footer className="border-t-[3px] border-cvo-black">
+  const footer = (
+    <footer className="border-t-[3px] border-cvo-black shrink-0">
         {!atTop && (
           <div className="overflow-hidden">
             <LogoArea content={content} />
@@ -1835,6 +1822,38 @@ export default function MagazinePreview({ content, onEdit, selectedBlockId, onSe
           <span>Editie {content.edition} — {content.year}</span>
         </div>
       </footer>
+  );
+
+  // ── Standard: echte A4-pagina's (210×297mm), géén doorlopende sliert ──
+  if (content.template === "Standard") {
+    return (
+      <div
+        id="magazine"
+        className="mx-auto flex flex-col items-center gap-8 print:gap-0 font-archivo"
+        style={scheme as React.CSSProperties}
+      >
+        {renderStandardPaged(content, onEdit, masthead, footer)}
+      </div>
+    );
+  }
+
+  // ── Overige templates: doorlopende layout (ongewijzigd) ──
+  return (
+    <div
+      id="magazine"
+      className="w-full max-w-[794px] mx-auto bg-cvo-cream border-[3px] border-cvo-black flex flex-col font-archivo overflow-hidden"
+      style={{ boxShadow: "6px 6px 0 #1a1a1a", ...scheme } as React.CSSProperties}
+    >
+      {masthead}
+      <div className="flex-1">
+        {content.template === "Collage" && renderCollage(content, onEdit)}
+        {content.template === "Brutalist" && renderBrutalist(content, onEdit)}
+        {content.template === "Street" && renderStreet(content, onEdit)}
+        {content.template === "Feature" && renderFeature(content, onEdit)}
+        {content.template === "Minimalist" && renderMinimalist(content, onEdit)}
+        {content.template === "Custom" && renderCustom(content, onEdit, selectedBlockId, onSelectBlock)}
+      </div>
+      {footer}
     </div>
   );
 }
@@ -1847,18 +1866,36 @@ const SOCIAL_TILE: Record<string, { name: string; bg: string; fg: string; chip: 
   website:   { name: "Website",   bg: "bg-cvo-mint",   fg: "text-cvo-black", chip: "border-cvo-black text-cvo-black" },
 };
 
-// Statement-band — vult lege ruimte onderaan een pagina met een korte,
-// krachtige uitspraak in de huisstijl. Bewerkbaar; verschijnt alleen als
-// `quote` gevuld is (zie renderStandard).
-function StatementBand({ quote, sub, onQuote, onSub, dark, minH }: {
+// ── Echte A4-pagina (210×297mm) ──
+const A4_W = 794;   // 210mm @ 96dpi
+const A4_H = 1123;  // 297mm @ 96dpi
+
+// Eén vaste A4-paginacontainer: flex-kolom zodat een flex-grow element de
+// onderkant vult; min-height = A4 zodat de pagina altijd een heel vel is.
+// In @media print krijgt .a4-page een break-after zodat elke pagina exact
+// op een eigen A4-vel begint (zie globals.css).
+function A4Page({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="a4-page bg-cvo-cream border-[3px] border-cvo-black flex flex-col overflow-hidden"
+      style={{ width: A4_W, minHeight: A4_H, boxShadow: "6px 6px 0 #1a1a1a" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Statement-band — accent in de huisstijl; met `grow` vult 'ie via flex de
+// resterende ruimte onderaan de pagina (geen crème rand).
+function StatementBand({ quote, sub, onQuote, onSub, dark, grow }: {
   quote: string; sub?: string;
   onQuote?: (v: string) => void; onSub?: (v: string) => void;
-  dark?: boolean; minH: number;
+  dark?: boolean; grow?: boolean;
 }) {
   const bg = dark ? "bg-cvo-black" : "bg-cvo-orange";
   const txt = dark ? "text-cvo-cream" : "text-white";
   return (
-    <section className={`${bg} border-b-[2px] border-cvo-black px-10 py-6 flex flex-col items-center justify-center text-center`} style={{ minHeight: minH }}>
+    <section className={`${bg} border-t-[2px] border-cvo-black px-10 py-6 flex flex-col items-center justify-center text-center ${grow ? "flex-1" : ""}`}>
       <span className={`font-archivo-black text-[9px] uppercase tracking-[0.3em] ${txt} opacity-60 mb-2`}>CLUBvanONS</span>
       <E value={quote} onEdit={onQuote} as="p" className={`font-archivo-black uppercase leading-[1.05] ${txt}`} style={{ fontSize: dark ? 30 : 24 }} multiLine />
       {(sub || onSub) && (
@@ -1869,12 +1906,20 @@ function StatementBand({ quote, sub, onQuote, onSub, dark, minH }: {
 }
 
 // ════════════════════════════════════════
-//  STANDARD TEMPLATE
+//  STANDARD TEMPLATE — echte A4-pagina's (geen doorlopende sliert)
 // ════════════════════════════════════════
-function renderStandard(content: MagazineContent, ed?: OnEdit) {
+function renderStandardPaged(
+  content: MagazineContent,
+  ed: OnEdit | undefined,
+  masthead: React.ReactNode,
+  footer: React.ReactNode,
+) {
   const { $, $fi, $cr, $tc, $tcb, $so } = h(content, ed);
   return (
     <>
+      {/* ═══════════ PAGINA 1 ═══════════ */}
+      <A4Page>
+      {masthead}
       {/* ── ROW 1: Meet the Crew | Terugblik ── */}
       <div className="flex border-b-[2px] border-cvo-black">
 
@@ -1924,12 +1969,15 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* Statement-band (oranje) — vult de stabiele onderkant van pagina 1 */}
+      {/* Vuller pagina 1: oranje statement-band (of lege flex-spacer) vult de rest */}
       {content.statementA ? (
         <StatementBand quote={content.statementA} sub={content.statementASub}
-          onQuote={$("statementA")} onSub={$("statementASub")} minH={165} />
-      ) : null}
+          onQuote={$("statementA")} onSub={$("statementASub")} grow />
+      ) : <div className="flex-1" />}
+      </A4Page>
 
+      {/* ═══════════ PAGINA 2 ═══════════ */}
+      <A4Page>
       {/* ── ROW 3: Clubnight IJpelaar | Clubnight Heuvel ── */}
       <div className="grid grid-cols-2 border-b-[2px] border-cvo-black">
         {/* Clubnight IJpelaar */}
@@ -1961,12 +2009,15 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* Statement-band (donker) — compact accent, geen vaste paginavuller meer */}
+      {/* Vuller pagina 2: donkere statement-band (of lege flex-spacer) vult de rest */}
       {content.statementB ? (
         <StatementBand quote={content.statementB} sub={content.statementBSub}
-          onQuote={$("statementB")} onSub={$("statementBSub")} dark minH={90} />
-      ) : null}
+          onQuote={$("statementB")} onSub={$("statementBSub")} dark grow />
+      ) : <div className="flex-1" />}
+      </A4Page>
 
+      {/* ═══════════ PAGINA 3 ═══════════ */}
+      <A4Page>
       {/* ── ROW 4: De tien codes (was Pak de Mic) ── */}
       <section className="bg-cvo-black px-5 py-4 border-b-[2px] border-cvo-black">
         <span className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-cvo-orange mb-1 block font-archivo">
@@ -2011,8 +2062,8 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         />
       </section>
 
-      {/* ── ROW 5: Vind ons — social media ── */}
-      <section className="px-5 py-4">
+      {/* ── ROW 5: Vind ons — social media (vult de rest van pagina 3) ── */}
+      <section className="px-5 py-4 flex-1">
         <E value={content.socialsEyebrow ?? "Volg de club"} onEdit={$("socialsEyebrow")} className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2 block font-archivo" />
         <E value={content.socialsHeadline ?? "Vind Ons"} onEdit={$("socialsHeadline")} as="h3" className="font-archivo-black text-[24px] leading-[0.9] uppercase text-cvo-black mb-3" />
         <div className="grid grid-cols-3 gap-3">
@@ -2034,6 +2085,8 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
           })}
         </div>
       </section>
+      {footer}
+      </A4Page>
     </>
   );
 }

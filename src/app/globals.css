@@ -83,28 +83,42 @@ body {
     overflow: visible !important;
   }
 
-  /* Magazine op volle breedte, natuurlijke hoogte — geen crop, geen clip */
+  /* Magazine = stapel A4-pagina's; geen gap of marge in print */
   #magazine {
     position: static !important;
-    width: 100% !important;
+    width: 210mm !important;
     height: auto !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    box-shadow: none !important;      /* alleen de buitenste schaduw weg; interne 3D-schaduwen blijven */
+    gap: 0 !important;
     overflow: visible !important;
   }
 
-  /* Laat secties doorlopen over de paginagrens (continue flow) zodat de
-     pagina's altijd vol zijn en het paginaaantal voorspelbaar is (hoogte/A4).
-     Alleen kleine, atomische elementen blijven heel zodat er niks lelijk
-     middenin wordt afgesneden: losse codes, foto's, koppen, header, footer. */
-  #magazine header,
-  #magazine footer,
-  #magazine li,
-  #magazine img,
-  #magazine h2,
-  #magazine h3 {
+  /* ── Echte A4-pagina's: elke .a4-page begint op een eigen vel ── */
+  .a4-page {
+    width: 210mm !important;
+    min-height: 297mm !important;     /* exact één A4-vel hoog (groeit alleen bij overflow) */
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    break-after: page !important;     /* volgende pagina op een nieuw vel */
+    break-inside: avoid;
+  }
+  .a4-page:last-child {
+    break-after: auto !important;     /* geen leeg extra vel achteraan */
+  }
+
+  /* Binnen een pagina: blokken nooit middendoor snijden mocht een pagina
+     toch overlopen naar een tweede vel. */
+  .a4-page section,
+  .a4-page header,
+  .a4-page footer,
+  .a4-page li,
+  .a4-page img,
+  .a4-page h2,
+  .a4-page h3 {
     break-inside: avoid;
   }
 

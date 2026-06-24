@@ -1901,23 +1901,26 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
           <E value={content.tienCodesEyebrow ?? "Onze filosofie"} onEdit={$("tienCodesEyebrow")} />
         </span>
         <E value={content.tienCodesHeadline ?? "De Tien Codes"} onEdit={$("tienCodesHeadline")} as="h2" className="font-archivo-black text-[40px] leading-[0.9] uppercase text-cvo-cream mb-3" />
-        {/* Foto + intro compact bovenaan */}
-        <div className="grid grid-cols-[1fr_1.4fr] gap-4 mb-4">
-          <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
-          <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo self-center" multiLine />
+        {/* Foto links, de tien codes rechts ernaast */}
+        <div className="grid grid-cols-[1fr_1.4fr] gap-5">
+          {/* Foto + intro */}
+          <div className="flex flex-col gap-2">
+            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
+            <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
+          </div>
+          {/* De tien codes — 2 kolommen rechts van de foto, titel + uitleg */}
+          <ol className="grid grid-cols-2 gap-x-5 gap-y-3 content-start">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="font-archivo-black text-cvo-orange text-[17px] leading-[0.95] w-[20px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <div className="flex-1 min-w-0">
+                  <E value={(content.tienCodes ?? [])[i] ?? ""} onEdit={$tc(i)} className="text-[10px] font-archivo-black uppercase leading-[1.15] text-cvo-cream block" />
+                  <E value={(content.tienCodesBodies ?? [])[i] ?? ""} onEdit={$tcb(i)} className="text-[8px] leading-[1.45] text-gray-400 font-archivo block mt-0.5" multiLine />
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
-        {/* De tien codes — vol breed, 2 kolommen, titel + uitleg (vult de ruimte) */}
-        <ol className="grid grid-cols-2 gap-x-6 gap-y-[14px] content-start">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <li key={i} className="flex items-start gap-2.5">
-              <span className="font-archivo-black text-cvo-orange text-[20px] leading-[0.95] w-[24px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
-              <div className="flex-1 min-w-0">
-                <E value={(content.tienCodes ?? [])[i] ?? ""} onEdit={$tc(i)} className="text-[11px] font-archivo-black uppercase leading-[1.15] text-cvo-cream block" />
-                <E value={(content.tienCodesBodies ?? [])[i] ?? ""} onEdit={$tcb(i)} className="text-[8.5px] leading-[1.5] text-gray-400 font-archivo block mt-1" multiLine />
-              </div>
-            </li>
-          ))}
-        </ol>
         {/* Afsluitende tekst onder de codes */}
         <E
           value={content.tienCodesOutro ?? (ed ? "Klik om tekst toe te voegen…" : "")}

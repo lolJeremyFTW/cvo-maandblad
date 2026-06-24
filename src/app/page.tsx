@@ -136,6 +136,7 @@ function slimForStorage(content: MagazineContent): MagazineContent {
     joinTileImage:    stripLarge(content.joinTileImage),
     clubHeuvelImage:  stripLarge(content.clubHeuvelImage),
     tienCodesImage:   stripLarge(content.tienCodesImage),
+    feature2Image:    stripLarge(content.feature2Image),
     // Crew member avatars (field is `avatar`, not `photo`)
     crew: content.crew.map((c) => ({
       ...c,

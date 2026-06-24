@@ -97,6 +97,12 @@ export interface MagazineContent {
   clubHeuvelBody?: string;
   clubHeuvelImage?: string;
 
+  // ── Tweede feature-blok (zoals "Op straat / Change the game", foto rechts) ──
+  feature2Eyebrow?: string;
+  feature2Headline?: string;
+  feature2Body?: string;
+  feature2Image?: string;
+
   // ── De tien codes (was "Pak de Mic") ──
   tienCodesEyebrow?: string;      // kleine kop bovenaan, bv. "Onze filosofie"
   tienCodesHeadline?: string;     // bv. "De tien codes"
@@ -178,6 +184,12 @@ export const defaultContent: MagazineContent = {
   clubHeuvelHeadline: "Clubnight Heuvel",
   clubHeuvelBody: "",
   clubHeuvelImage: "",
+
+  // Tweede feature-blok
+  feature2Eyebrow: "In de wijk",
+  feature2Headline: "Kop hier",
+  feature2Body: "",
+  feature2Image: "",
 
   // De tien codes
   tienCodesEyebrow: "Onze filosofie",
@@ -1894,6 +1906,18 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
           <E value={content.clubHeuvelBody ?? ""} onEdit={$("clubHeuvelBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-cream flex-1" multiLine />
         </section>
       </div>
+
+      {/* ── ROW 3.5: Tweede feature-blok (zoals Change the game, foto rechts, crème) ── */}
+      <section className="border-b-[2px] border-cvo-black">
+        <div className="grid grid-cols-[3fr_2fr]">
+          <div className="px-4 py-4 border-r-[2px] border-cvo-black">
+            <E value={content.feature2Eyebrow ?? "In de wijk"} onEdit={$("feature2Eyebrow")} className="text-[7.5px] font-bold tracking-[0.25em] uppercase text-gray-400 mb-2 block font-archivo" />
+            <E value={content.feature2Headline ?? "Kop hier"} onEdit={$("feature2Headline")} as="h2" className="font-archivo-black text-[44px] leading-[0.88] uppercase text-cvo-black mb-3" />
+            <E value={content.feature2Body ?? ""} onEdit={$("feature2Body")} as="p" className="text-[10.5px] leading-[1.7] font-archivo text-gray-700" multiLine />
+          </div>
+          <FotoSlot src={content.feature2Image} label="foto" className="w-full min-h-[180px]" onUpload={$("feature2Image")} />
+        </div>
+      </section>
 
       {/* ── ROW 4: De tien codes (was Pak de Mic) ── */}
       <section className="bg-cvo-black px-5 py-4 border-b-[2px] border-cvo-black">

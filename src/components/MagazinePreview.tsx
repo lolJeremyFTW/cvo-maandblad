@@ -1922,10 +1922,10 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* Statement-band — vult de ruimte onderaan pagina 1 (oranje) */}
+      {/* Statement-band — vult de ruimte onderaan pagina 1 (oranje) tot de rand */}
       {content.statementA ? (
         <StatementBand quote={content.statementA} sub={content.statementASub}
-          onQuote={$("statementA")} onSub={$("statementASub")} minH={110} />
+          onQuote={$("statementA")} onSub={$("statementASub")} minH={168} />
       ) : null}
 
       {/* ── ROW 3: Clubnight IJpelaar | Clubnight Heuvel ── */}
@@ -1959,10 +1959,10 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
-      {/* Statement-band — vult de ruimte onderaan pagina 2 (donker) */}
+      {/* Statement-band — vult de ruimte onderaan pagina 2 (donker) tot de rand */}
       {content.statementB ? (
         <StatementBand quote={content.statementB} sub={content.statementBSub}
-          onQuote={$("statementB")} onSub={$("statementBSub")} dark minH={350} />
+          onQuote={$("statementB")} onSub={$("statementBSub")} dark minH={410} />
       ) : null}
 
       {/* ── ROW 4: De tien codes (was Pak de Mic) ── */}
@@ -2009,8 +2009,9 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         />
       </section>
 
-      {/* ── ROW 5: Vind ons — social media ── */}
-      <section className="px-5 py-4">
+      {/* ── ROW 5: Vind ons — social media (extra ondermarge zodat de footer
+          de onderrand van pagina 3 raakt, geen crème strookje) ── */}
+      <section className="px-5 pt-4 pb-9">
         <E value={content.socialsEyebrow ?? "Volg de club"} onEdit={$("socialsEyebrow")} className="text-[7.5px] font-bold uppercase tracking-[0.25em] text-gray-400 mb-2 block font-archivo" />
         <E value={content.socialsHeadline ?? "Vind Ons"} onEdit={$("socialsHeadline")} as="h3" className="font-archivo-black text-[24px] leading-[0.9] uppercase text-cvo-black mb-3" />
         <div className="grid grid-cols-3 gap-3">

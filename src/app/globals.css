@@ -95,12 +95,16 @@ body {
     overflow: visible !important;
   }
 
-  /* Houd ELKE sectie heel — geen enkele sectie mag over de paginagrens
-     worden afgesneden. De overblijvende witruimte vul je met het
-     feature-blok ("KOP HIER"). */
+  /* Laat secties doorlopen over de paginagrens (continue flow) zodat de
+     pagina's altijd vol zijn en het paginaaantal voorspelbaar is (hoogte/A4).
+     Alleen kleine, atomische elementen blijven heel zodat er niks lelijk
+     middenin wordt afgesneden: losse codes, foto's, koppen, header, footer. */
   #magazine header,
   #magazine footer,
-  #magazine section {
+  #magazine li,
+  #magazine img,
+  #magazine h2,
+  #magazine h3 {
     break-inside: avoid;
   }
 

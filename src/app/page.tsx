@@ -531,6 +531,22 @@ export default function Home() {
 
   const handleRegionCancel = useCallback(() => setRegionSelectMode(false), []);
 
+  // ── Auto-fit op A4: meet de natuurlijke hoogte en zet printScale zo dat de
+  //    hele pagina precies in een heel aantal A4-vellen past (nooit vergroten). ──
+  const autoFitPrint = () => {
+    const mag = document.getElementById("magazine");
+    if (!mag) return;
+    const rect = mag.getBoundingClientRect();
+    const curScale = rect.width / 794 || 1;        // huidige schermschaal corrigeren
+    const naturalH = rect.height / curScale;        // hoogte bij 100% (794px = 210mm)
+    const A4 = 1122.52;                             // 297mm @ 96dpi
+    const pages = naturalH / A4;
+    const target = Math.max(1, Math.round(pages));          // dichtstbijzijnde heel aantal pagina's
+    const scale = pages > target ? target / pages : 1;      // alleen verkleinen als het overloopt
+    const pct = Math.max(50, Math.min(100, Math.round(scale * 100)));
+    setContent(c => ({ ...c, printScale: pct }));
+  };
+
   return (
     <PasswordGate>
     <main className="flex h-screen bg-gray-200 overflow-hidden">
@@ -692,6 +708,13 @@ export default function Home() {
                   <ZoomIn size={14} />
                 </button>
               </div>
+              <button
+                onClick={autoFitPrint}
+                className="px-2 py-1 bg-cvo-black text-cvo-cream font-archivo-black text-[9px] uppercase tracking-tight border-[2px] border-cvo-black hover:bg-cvo-orange transition-colors"
+                title="Bereken automatisch de schaal zodat alles op hele A4-pagina's past"
+              >
+                Auto-fit
+              </button>
             </div>
             {/* AI chat toggle in toolbar too */}
             <div className="ml-auto">

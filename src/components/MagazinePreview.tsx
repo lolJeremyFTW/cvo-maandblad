@@ -102,7 +102,8 @@ export interface MagazineContent {
   tienCodesHeadline?: string;     // bv. "De tien codes"
   tienCodesIntro?: string;        // uitleg bij de codes
   tienCodesImage?: string;        // foto bij de codes
-  tienCodes?: string[];           // de tien codes (genummerde lijst)
+  tienCodes?: string[];           // de tien codes — titels (genummerde lijst)
+  tienCodesBodies?: string[];     // de tien codes — uitleg per code
   tienCodesOutro?: string;        // afsluitende tekst onder de codes
 
   // ── Vind ons — social media ──
@@ -184,6 +185,7 @@ export const defaultContent: MagazineContent = {
   tienCodesIntro: "",
   tienCodesImage: "",
   tienCodes: ["", "", "", "", "", "", "", "", "", ""],
+  tienCodesBodies: ["", "", "", "", "", "", "", "", "", ""],
   tienCodesOutro: "",
 
   // Vind ons
@@ -295,7 +297,7 @@ function h(c: MagazineContent, ed?: OnEdit) {
     name: ed ? (v: string) => ed({ sponsors: c.sponsors.map((s, j) => j === i ? { ...s, name: v } : s) }) : undefined,
     logo: ed ? (v: string) => ed({ sponsors: c.sponsors.map((s, j) => j === i ? { ...s, logo: v } : s) }) : undefined,
   });
-  // De tien codes — bewerk losse code-regel i
+  // De tien codes — bewerk titel van code i
   const $tc = (i: number) =>
     ed ? (v: string) => {
       const list = [...(c.tienCodes ?? [])];
@@ -303,12 +305,20 @@ function h(c: MagazineContent, ed?: OnEdit) {
       list[i] = v;
       ed({ tienCodes: list });
     } : undefined;
+  // De tien codes — bewerk uitleg van code i
+  const $tcb = (i: number) =>
+    ed ? (v: string) => {
+      const list = [...(c.tienCodesBodies ?? [])];
+      while (list.length <= i) list.push("");
+      list[i] = v;
+      ed({ tienCodesBodies: list });
+    } : undefined;
   // Socials — bewerk label of url van link i
   const $so = (i: number) => ({
     label: ed ? (v: string) => ed({ socials: (c.socials ?? []).map((s, j) => j === i ? { ...s, label: v } : s) }) : undefined,
     url:   ed ? (v: string) => ed({ socials: (c.socials ?? []).map((s, j) => j === i ? { ...s, url: v } : s) }) : undefined,
   });
-  return { $, $fi, $cr, $ev, $sp, $tc, $so };
+  return { $, $fi, $cr, $ev, $sp, $tc, $tcb, $so };
 }
 
 // ── Image compression — resize to maxPx on longest side, encode as JPEG ──
@@ -1814,7 +1824,7 @@ const SOCIAL_TILE: Record<string, { name: string; bg: string; fg: string; chip: 
 //  STANDARD TEMPLATE
 // ════════════════════════════════════════
 function renderStandard(content: MagazineContent, ed?: OnEdit) {
-  const { $, $fi, $cr, $tc, $so } = h(content, ed);
+  const { $, $fi, $cr, $tc, $tcb, $so } = h(content, ed);
   return (
     <>
       {/* ── ROW 1: Meet the Crew | Terugblik ── */}
@@ -1891,22 +1901,23 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
           <E value={content.tienCodesEyebrow ?? "Onze filosofie"} onEdit={$("tienCodesEyebrow")} />
         </span>
         <E value={content.tienCodesHeadline ?? "De Tien Codes"} onEdit={$("tienCodesHeadline")} as="h2" className="font-archivo-black text-[40px] leading-[0.9] uppercase text-cvo-cream mb-3" />
-        <div className="grid grid-cols-[1fr_1.4fr] gap-4">
-          {/* Foto + uitleg */}
-          <div className="flex flex-col gap-2">
-            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
-            <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
-          </div>
-          {/* Genummerde lijst van tien codes */}
-          <ol className="grid grid-cols-2 gap-x-4 gap-y-1.5 content-start">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <li key={i} className="flex items-baseline gap-2">
-                <span className="font-archivo-black text-cvo-orange text-[14px] leading-none w-[18px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                <E value={(content.tienCodes ?? [])[i] ?? ""} onEdit={$tc(i)} className="text-[9.5px] leading-[1.4] text-cvo-cream font-archivo flex-1" />
-              </li>
-            ))}
-          </ol>
+        {/* Foto + intro compact bovenaan */}
+        <div className="grid grid-cols-[1fr_1.4fr] gap-4 mb-4">
+          <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
+          <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo self-center" multiLine />
         </div>
+        {/* De tien codes — vol breed, 2 kolommen, titel + uitleg (vult de ruimte) */}
+        <ol className="grid grid-cols-2 gap-x-6 gap-y-[14px] content-start">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <li key={i} className="flex items-start gap-2.5">
+              <span className="font-archivo-black text-cvo-orange text-[20px] leading-[0.95] w-[24px] shrink-0">{String(i + 1).padStart(2, "0")}</span>
+              <div className="flex-1 min-w-0">
+                <E value={(content.tienCodes ?? [])[i] ?? ""} onEdit={$tc(i)} className="text-[11px] font-archivo-black uppercase leading-[1.15] text-cvo-cream block" />
+                <E value={(content.tienCodesBodies ?? [])[i] ?? ""} onEdit={$tcb(i)} className="text-[8.5px] leading-[1.5] text-gray-400 font-archivo block mt-1" multiLine />
+              </div>
+            </li>
+          ))}
+        </ol>
         {/* Afsluitende tekst onder de codes */}
         <E
           value={content.tienCodesOutro ?? (ed ? "Klik om tekst toe te voegen…" : "")}

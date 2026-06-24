@@ -103,6 +103,13 @@ export interface MagazineContent {
   feature2Body?: string;
   feature2Image?: string;
 
+  // ── Statement-banden (vullen lege ruimte onderaan pagina 1 & 2; tonen alleen
+  //    als er tekst in staat — leeghalen = band verdwijnt) ──
+  statementA?: string;      // band pagina 1 (oranje)
+  statementASub?: string;
+  statementB?: string;      // band pagina 2 (donker)
+  statementBSub?: string;
+
   // ── De tien codes (was "Pak de Mic") ──
   tienCodesEyebrow?: string;      // kleine kop bovenaan, bv. "Onze filosofie"
   tienCodesHeadline?: string;     // bv. "De tien codes"
@@ -190,6 +197,12 @@ export const defaultContent: MagazineContent = {
   feature2Headline: "Kop hier",
   feature2Body: "",
   feature2Image: "",
+
+  // Statement-banden (standaard leeg → verschijnen niet)
+  statementA: "",
+  statementASub: "",
+  statementB: "",
+  statementBSub: "",
 
   // De tien codes
   tienCodesEyebrow: "Onze filosofie",
@@ -1832,6 +1845,27 @@ const SOCIAL_TILE: Record<string, { name: string; bg: string; fg: string; chip: 
   website:   { name: "Website",   bg: "bg-cvo-mint",   fg: "text-cvo-black", chip: "border-cvo-black text-cvo-black" },
 };
 
+// Statement-band — vult lege ruimte onderaan een pagina met een korte,
+// krachtige uitspraak in de huisstijl. Bewerkbaar; verschijnt alleen als
+// `quote` gevuld is (zie renderStandard).
+function StatementBand({ quote, sub, onQuote, onSub, dark, minH }: {
+  quote: string; sub?: string;
+  onQuote?: (v: string) => void; onSub?: (v: string) => void;
+  dark?: boolean; minH: number;
+}) {
+  const bg = dark ? "bg-cvo-black" : "bg-cvo-orange";
+  const txt = dark ? "text-cvo-cream" : "text-white";
+  return (
+    <section className={`${bg} border-b-[2px] border-cvo-black px-10 py-6 flex flex-col items-center justify-center text-center`} style={{ minHeight: minH }}>
+      <span className={`font-archivo-black text-[9px] uppercase tracking-[0.3em] ${txt} opacity-60 mb-2`}>CLUBvanONS</span>
+      <E value={quote} onEdit={onQuote} as="p" className={`font-archivo-black uppercase leading-[1.05] ${txt}`} style={{ fontSize: dark ? 30 : 24 }} multiLine />
+      {(sub || onSub) && (
+        <E value={sub ?? ""} onEdit={onSub} as="p" className={`font-archivo ${txt} opacity-75 mt-3 text-[10px] leading-[1.6] max-w-[440px]`} multiLine />
+      )}
+    </section>
+  );
+}
+
 // ════════════════════════════════════════
 //  STANDARD TEMPLATE
 // ════════════════════════════════════════
@@ -1888,6 +1922,12 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         </div>
       </section>
 
+      {/* Statement-band — vult de ruimte onderaan pagina 1 (oranje) */}
+      {content.statementA ? (
+        <StatementBand quote={content.statementA} sub={content.statementASub}
+          onQuote={$("statementA")} onSub={$("statementASub")} minH={110} />
+      ) : null}
+
       {/* ── ROW 3: Clubnight IJpelaar | Clubnight Heuvel ── */}
       <div className="grid grid-cols-2 border-b-[2px] border-cvo-black">
         {/* Clubnight IJpelaar */}
@@ -1918,6 +1958,12 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
           <FotoSlot src={content.feature2Image} label="foto" className="w-full min-h-[180px]" onUpload={$("feature2Image")} />
         </div>
       </section>
+
+      {/* Statement-band — vult de ruimte onderaan pagina 2 (donker) */}
+      {content.statementB ? (
+        <StatementBand quote={content.statementB} sub={content.statementBSub}
+          onQuote={$("statementB")} onSub={$("statementBSub")} dark minH={350} />
+      ) : null}
 
       {/* ── ROW 4: De tien codes (was Pak de Mic) ── */}
       <section className="bg-cvo-black px-5 py-4 border-b-[2px] border-cvo-black">

@@ -94,10 +94,15 @@ body {
     overflow: visible !important;
   }
 
-  /* Houd elke sectie zoveel mogelijk heel bij een paginawissel */
+  /* Laat grote secties over de paginagrens doorlopen (geen grote witruimte
+     vóór een lange sectie), maar houd kleine, atomische elementen heel:
+     losse codes, foto's, koppen, header en footer. */
   #magazine header,
   #magazine footer,
-  #magazine section {
+  #magazine li,
+  #magazine img,
+  #magazine h2,
+  #magazine h3 {
     break-inside: avoid;
   }
 

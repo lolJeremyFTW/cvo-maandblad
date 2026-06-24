@@ -1908,10 +1908,11 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
             <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
             <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
           </div>
-          {/* De tien codes — twee kolommen rechts, speels uitgevuld over de hoogte (zoals de flyer) */}
-          <div className="grid grid-cols-2 gap-x-5 h-full">
+          {/* De tien codes — twee kolommen rechts; rechterkolom een halve regel
+              lager zodat 2 tussen 1 en 3 valt (speels, zoals de flyer) */}
+          <div className="grid grid-cols-2 gap-x-5">
             {[0, 1].map((col) => (
-              <ol key={col} className={`flex flex-col justify-between gap-y-3 ${col === 1 ? "pt-6" : ""}`}>
+              <ol key={col} className={`flex flex-col gap-y-5 ${col === 1 ? "pt-[34px]" : ""}`}>
                 {[0, 1, 2, 3, 4].map((r) => {
                   const i = r * 2 + col;
                   return (

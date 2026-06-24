@@ -100,4 +100,10 @@ body {
   #magazine section {
     break-inside: avoid;
   }
+
+  /* Sommige knoppen (zwevende AI-chat, chatpaneel) hebben een inline
+     display:flex die print:hidden overschrijft — forceer het verbergen. */
+  .print\:hidden {
+    display: none !important;
+  }
 }

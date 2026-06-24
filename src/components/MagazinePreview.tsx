@@ -1912,7 +1912,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
               lager zodat 2 tussen 1 en 3 valt (speels, zoals de flyer) */}
           <div className="grid grid-cols-2 gap-x-5">
             {[0, 1].map((col) => (
-              <ol key={col} className={`flex flex-col gap-y-5 ${col === 1 ? "pt-[34px]" : ""}`}>
+              <ol key={col} className={`flex flex-col gap-y-[25px] ${col === 1 ? "pt-[37px]" : ""}`}>
                 {[0, 1, 2, 3, 4].map((r) => {
                   const i = r * 2 + col;
                   return (

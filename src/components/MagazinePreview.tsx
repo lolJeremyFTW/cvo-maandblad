@@ -336,11 +336,16 @@ function compressImage(dataUrl: string, maxPx = 960, quality = 0.82): Promise<st
 }
 
 // ── Foto slot with optional click-to-upload ──
-function FotoSlot({ label = "foto", className, src, onUpload, contain }: { label?: string; className?: string; src?: string; onUpload?: (v: string) => void; contain?: boolean }) {
+function FotoSlot({ label = "foto", className, src, onUpload, contain, natural }: { label?: string; className?: string; src?: string; onUpload?: (v: string) => void; contain?: boolean; natural?: boolean }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  // natural = frame past zich aan de foto aan (originele verhouding), geen vaste crop
+  const imgCls = natural
+    ? "block w-full h-auto"
+    : `w-full h-full ${contain ? "object-contain p-1" : "object-cover"}`;
+  const placeholderCls = `w-full ${natural ? "min-h-[120px]" : "h-full"} bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-[8px] font-bold uppercase tracking-widest text-gray-400 font-archivo`;
   const inner = src
-    ? <img src={src} alt={label} className={`w-full h-full ${contain ? "object-contain p-1" : "object-cover"}`} />
-    : <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-[8px] font-bold uppercase tracking-widest text-gray-400 font-archivo">{label}</div>;
+    ? <img src={src} alt={label} className={imgCls} />
+    : <div className={placeholderCls}>{label}</div>;
 
   if (!onUpload) {
     return <div className={cn("overflow-hidden", className)}>{inner}</div>;
@@ -1867,7 +1872,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <section className="bg-cvo-mint border-r-[2px] border-cvo-black px-4 py-4 flex flex-col">
           <E value={content.clubIJpelaarBadge ?? "Clubnight"} onEdit={$("clubIJpelaarBadge")} className="inline-block bg-cvo-black text-cvo-mint text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start" />
           <E value={content.buurtpostHeadline} onEdit={$("buurtpostHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-black mb-3" />
-          <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("buurtpostImage")} />
+          <FotoSlot src={content.buurtpostImage} label="foto clubnight" className="w-full mb-3 flex-shrink-0" natural onUpload={$("buurtpostImage")} />
           <E value={content.buurtpostBody} onEdit={$("buurtpostBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-black flex-1" multiLine />
         </section>
 
@@ -1875,7 +1880,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <section className="bg-cvo-orange px-4 py-4 flex flex-col">
           <E value={content.clubHeuvelBadge ?? "Clubnight"} onEdit={$("clubHeuvelBadge")} className="inline-block bg-cvo-black text-cvo-orange text-[7px] font-bold uppercase tracking-[0.2em] px-2 py-[2px] mb-2 font-archivo self-start" />
           <E value={content.clubHeuvelHeadline ?? "Clubnight Heuvel"} onEdit={$("clubHeuvelHeadline")} as="h3" className="font-archivo-black text-[26px] leading-[0.9] uppercase text-cvo-cream mb-3" />
-          <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full h-[120px] mb-3 flex-shrink-0" onUpload={$("clubHeuvelImage")} />
+          <FotoSlot src={content.clubHeuvelImage} label="foto clubnight" className="w-full mb-3 flex-shrink-0" natural onUpload={$("clubHeuvelImage")} />
           <E value={content.clubHeuvelBody ?? ""} onEdit={$("clubHeuvelBody")} as="p" className="text-[9.5px] leading-[1.6] font-archivo text-cvo-cream flex-1" multiLine />
         </section>
       </div>
@@ -1889,7 +1894,7 @@ function renderStandard(content: MagazineContent, ed?: OnEdit) {
         <div className="grid grid-cols-[1fr_1.4fr] gap-4">
           {/* Foto + uitleg */}
           <div className="flex flex-col gap-2">
-            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full h-[110px]" onUpload={$("tienCodesImage")} />
+            <FotoSlot src={content.tienCodesImage} label="foto" className="w-full" natural onUpload={$("tienCodesImage")} />
             <E value={content.tienCodesIntro ?? ""} onEdit={$("tienCodesIntro")} as="p" className="text-[9.5px] leading-[1.6] text-gray-400 font-archivo" multiLine />
           </div>
           {/* Genummerde lijst van tien codes */}

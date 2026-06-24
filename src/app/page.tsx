@@ -538,7 +538,7 @@ export default function Home() {
 
       {/* LocalStorage full warning */}
       {saveWarning && (
-        <div style={{
+        <div className="print:hidden" style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
           background: "#ef4444", color: "white", padding: "8px 16px",
           fontFamily: "sans-serif", fontSize: 13, fontWeight: 700,
@@ -716,6 +716,7 @@ export default function Home() {
       {!chatOpen && (
         <button
           onClick={() => setChatOpen(true)}
+          className="print:hidden"
           style={{
             position: "fixed", bottom: 24, right: 24,
             width: 52, height: 52, borderRadius: "50%",

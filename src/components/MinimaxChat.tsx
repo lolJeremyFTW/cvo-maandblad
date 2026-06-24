@@ -642,7 +642,7 @@ export default function MinimaxChat({ isOpen, onClose, content, onEdit, onUndo, 
   const knownUsers = Object.values(profiles);
 
   return (
-    <div style={{
+    <div className="print:hidden" style={{
       width: 390, minWidth: 390, height: "100vh",
       background: "#18181b", borderLeft: "2px solid #F15B2B",
       display: "flex", flexDirection: "column",

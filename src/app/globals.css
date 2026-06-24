@@ -48,7 +48,6 @@ body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
-    visibility: hidden !important;
   }
 
   html, body {
@@ -56,43 +55,49 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     width: 210mm !important;
-    height: 297mm !important;
+    height: auto !important;        /* laat de inhoud over meerdere pagina's doorlopen */
+    overflow: visible !important;
   }
 
-  /* ── Zoom-wrapper: reset screen-zoom, position to A4 ── */
-  /* This ensures the magazine always prints at 100% scale regardless of
-     the on-screen zoom level the user has set in the editor.              */
+  /* Reset de schermlayout (h-screen + overflow-hidden) zodat het magazine
+     volledig én over meerdere A4-pagina's kan doorlopen i.p.v. afgekapt op pagina 1 */
+  main {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* ── Zoom-wrapper: schermzoom resetten, volle A4-breedte, natuurlijke hoogte ── */
+  /* Zo print het magazine altijd op 100% schaal, ongeacht de zoom in de editor. */
   #magazine-zoom-wrapper {
-    visibility: visible !important;
     zoom: 1 !important;               /* cancel screen zoom */
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: static !important;
     width: 210mm !important;
-    height: 297mm !important;
+    height: auto !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
-  /* Alleen het magazine en zijn kinderen zichtbaar */
-  #magazine-zoom-wrapper #magazine,
-  #magazine-zoom-wrapper #magazine * {
-    visibility: visible !important;
-  }
-
-  /* Magazine fills the wrapper exactly */
+  /* Magazine op volle breedte, natuurlijke hoogte — geen crop, geen clip */
   #magazine {
     position: static !important;
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    box-shadow: none !important; /* only remove the outer magazine shadow, inner 3D shadows stay */
-    overflow: hidden !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
+    box-shadow: none !important;      /* alleen de buitenste schaduw weg; interne 3D-schaduwen blijven */
+    overflow: visible !important;
+  }
+
+  /* Houd elke sectie zoveel mogelijk heel bij een paginawissel */
+  #magazine header,
+  #magazine footer,
+  #magazine section {
+    break-inside: avoid;
   }
 }
